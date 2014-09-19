@@ -89,6 +89,13 @@ def search_source_for_patterns(source, patterns):
         The source directory to search for patterns
     patterns : list : lists
         A list of patterns
+
+    :return dict
+        {'dirs_to_move' : list of dirs to move,
+         'files_to_move' : list of files to move,
+         'paths_matched' : list of paths queried and found in source
+         'paths_not_matched' : list of paths queried but not found in source}
+
     """
     dirs_to_move = []
     files_to_move=[]
@@ -128,22 +135,20 @@ def search_source_for_patterns(source, patterns):
 
     paths_not_matched = [os.path.sep.join(u) for u in unsatisfied]
     paths_matched = [os.path.sep.join(s) for s in satisfied]
-
     out_dict = {'dirs_to_move':dirs_to_move,
                 'files_to_move':files_to_move,
                 'paths_matched':paths_matched,
                 'paths_not_matched':paths_not_matched}
     return out_dict
 
-
 def move_by_regex(source, dest, paths_file):
-    swisspy_path = swisspy. get_dir_currently_running_in()
-    current_dir = swisspy.smooth_join(swisspy_path, '..')
     if not paths_file:
+        swisspy_path = swisspy. get_dir_currently_running_in()
+        current_dir = swisspy.smooth_join(swisspy_path, '..')
         paths_file = swisspy.smooth_join(current_dir, 'enter_paths_here.txt')
     paths = get_lines(paths_file)
     patterns = get_patterns(paths)
-    paths_to_move = search_source_for_patterns(source, patterns)
+    search_result = search_source_for_patterns(source, patterns)
 
 def main():
     args = init_args()
