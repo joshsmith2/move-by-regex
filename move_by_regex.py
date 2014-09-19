@@ -23,7 +23,7 @@ def get_lines(from_path):
         return [line.strip() for line in f]
 
 def split_path(path):
-    """Given a pth, this will split it into a list where each component is
+    """Given a path, this will split it into a list where each component is
     a level in the filesystem.
 
     >>>split_path('/tmp/buttress//pants/./pig.txt')

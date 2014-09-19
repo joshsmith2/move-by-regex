@@ -8,6 +8,8 @@ import subprocess as sp
 import time
 from filecmp import dircmp
 
+import move_by_regex
+
 def smooth_join(*args):
     """
     Join two paths together properly
@@ -76,10 +78,10 @@ class TestSimpleTransfer(unittest.TestCase):
 
 
     def test_paths_can_be_loaded_from_input(self):
+        paths_to_test = move_by_regex.get_lines(self.input_file)
         with open(self.input_file, 'r') as input_file:
-            paths_to_move = [line.strip() for line in input_file]
-        pass
-
+            paths = [line.strip() for line in input_file]
+        assert paths_to_test == paths
 
 
 if __name__ == '__main__':
