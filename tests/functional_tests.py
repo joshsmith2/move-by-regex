@@ -49,6 +49,10 @@ class TransferTest(unittest.TestCase):
         self.dest = smooth_join(self.root, 'dest')
         self.input_model = smooth_join(self.models, 'enter_paths_model.txt')
         self.input_file = smooth_join(self.models, 'enter_paths_here.txt')
+        self.test_input = "move_me\n" \
+                          "*/move_me\n" \
+                          "move_me_too/i_should_also_be_moved\n" \
+                          "# A user comment"
 
         # Copy model folder
         try:
@@ -65,7 +69,7 @@ class TransferTest(unittest.TestCase):
         # Copy and populate input file
         shutil.copy(self.input_model, self.input_file)
         with open(self.input_file, 'a') as input_file:
-            input_file.write('move_me\nmove_me_too')
+            input_file.write(self.test_input)
 
     def tearDown(self):
         # Remove source entirely and recreate it
@@ -81,17 +85,15 @@ class TransferTest(unittest.TestCase):
 
     # MINIMUM VIABLE PRODUCT
 
-    # Accept strings (e.g project numbers) from a text file
-    # and move any folders named after them from source to dest.
+    # Accept paths from a text file and move any matching folders or files
+    # from source to dest.
     def test_move_files_matching_string(self):
         to_move = self.input_file
-        goal = smooth_join(self.models,'output_test_move_files_matching_string')
+        goal = smooth_join(self.models,
+                           'output_test_move_files_matching_string')
         ### CALL TO FUNCTION GOES HERE ###
 
         assert dirs_match(self.dest, goal)
-
-
-    # Check for matches at / between given depths of the file path
 
     # Read-only mode which only logs and does not move
 

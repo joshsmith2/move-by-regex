@@ -54,7 +54,10 @@ class TestSimpleTransfer(unittest.TestCase):
         self.logs = smooth_join(self.root, 'logs')
         self.input = smooth_join(self.models, 'input')
         self.input_file = smooth_join(self.root, 'files_to_move.txt')
-        self.test_input = "move_me\nmove_me_too\n# A user comment"
+        self.test_input = "move_me\n" \
+                          "*/move_me\n" \
+                          "move_me_too/i_should_also_be_moved\n" \
+                          "# A user comment"
 
         # Copy model folder
         try:
@@ -71,14 +74,12 @@ class TestSimpleTransfer(unittest.TestCase):
             input_file.write(self.test_input)
 
     def tearDown(self):
-        # Remove source entirely and recreate it
         shutil.rmtree(self.source)
         os.remove(self.input_file)
 
-
     def test_paths_can_be_loaded_from_input_without_comments(self):
         observed = move_by_regex.get_lines(self.input_file)
-        desired = self.test_input.split('\n')[:2]
+        desired = self.test_input.split('\n')[:-1]
         assert observed == desired
 
 
