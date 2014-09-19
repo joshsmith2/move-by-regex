@@ -13,6 +13,7 @@ import inspect
 import time
 from filecmp import dircmp
 import swisspy
+import move_by_regex
 
 class TransferTest(unittest.TestCase):
 
@@ -66,10 +67,10 @@ class TransferTest(unittest.TestCase):
     # Accept paths from a text file and move any matching folders or files
     # from source to dest.
     def test_move_files_matching_string(self):
-        to_move = self.input_file
         goal = swisspy.smooth_join(self.models,
                                    'output_test_move_files_matching_string')
-        ### CALL TO FUNCTION GOES HERE ###
+
+        move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
 
         assert swisspy.dirs_match(self.dest, goal)
 
