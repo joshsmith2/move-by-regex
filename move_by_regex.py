@@ -3,6 +3,7 @@
 import argparse
 import os
 import swisspy
+import shutil
 
 def init_args():
     """ Initialise command line arguments"""
@@ -80,6 +81,37 @@ def path_depth_difference(path1, path2):
     path2_depth = len(os.path.normpath(path2).split(os.path.sep))
     return abs(path1_depth - path2_depth)
 
+def glob_equal(candidate, match_to, glob='*'):
+    """
+    >>> glob_equal('hive', 'hive')
+    True
+    >>> glob_equal('hive','handrews')
+    False
+    >>> glob_equal('anything', '*')
+    True
+    >>> glob_equal('anything', '&', glob='&')
+    True
+    """
+    if candidate == match_to or match_to == glob:
+        out = True
+    else:
+        out = False
+    return out
+
+def find_redundant_patterns(model, from_list):
+    """
+    >>> find_redundant_patterns(['a','b','c'], [['a','b'],['a','b','c','d']])
+    [['a', 'b', 'c', 'd']]
+    """
+    redundant_patterns = []
+    for p in from_list:
+        if len(model) <= len(p):
+            for m in model:
+                if m != p[model.index(m)]:
+                    continue
+            redundant_patterns.append(p)
+    return redundant_patterns
+
 def search_source_for_patterns(source, patterns):
     """
     Walk the source directory and return a list of paths which match patterns.
@@ -94,7 +126,9 @@ def search_source_for_patterns(source, patterns):
         {'dirs_to_move' : list of dirs to move,
          'files_to_move' : list of files to move,
          'paths_matched' : list of paths queried and found in source
-         'paths_not_matched' : list of paths queried but not found in source}
+         'paths_not_matched' : list of paths queried but not found in source
+         'redundant_paths' : list of paths not searched as a parent dir had
+                             already been found}
 
     """
     dirs_to_move = []
@@ -103,6 +137,7 @@ def search_source_for_patterns(source, patterns):
     # Maintaining two lists is easier than comparing unsatisfied with patterns
     unsatisfied = patterns[:]
     satisfied = []
+    redundant = []
 
     for root, dirs, files in os.walk(source):
         walk_depth = path_depth_difference(root, source)
@@ -114,7 +149,7 @@ def search_source_for_patterns(source, patterns):
             continue
         for pattern in possible_patterns:
             for d in dirs:
-                if pattern[walk_depth] == d or pattern[walk_depth] == '*':
+                if glob_equal(d, pattern[walk_depth]):
                     # We've got a match! If that's the end of the pattern,
                     # move this object
                     if len(pattern) - 1 == walk_depth:
@@ -124,6 +159,7 @@ def search_source_for_patterns(source, patterns):
                         dirs.remove(d)
                         unsatisfied.remove(pattern)
                         satisfied.append(pattern)
+
             for f in files:
                 if pattern[walk_depth] == f or pattern[walk_depth] == '*':
                     if len(pattern) == walk_depth - 1:
@@ -135,10 +171,12 @@ def search_source_for_patterns(source, patterns):
 
     paths_not_matched = [os.path.sep.join(u) for u in unsatisfied]
     paths_matched = [os.path.sep.join(s) for s in satisfied]
+    redundant_paths = [os.path.sep.join(r) for r in redundant]
     out_dict = {'dirs_to_move':dirs_to_move,
                 'files_to_move':files_to_move,
                 'paths_matched':paths_matched,
-                'paths_not_matched':paths_not_matched}
+                'paths_not_matched':paths_not_matched,
+                'redundant_paths':redundant_paths}
     return out_dict
 
 def move_by_regex(source, dest, paths_file):
@@ -149,6 +187,10 @@ def move_by_regex(source, dest, paths_file):
     paths = get_lines(paths_file)
     patterns = get_patterns(paths)
     search_result = search_source_for_patterns(source, patterns)
+    for dir_path in search_result['dirs_to_move']:
+        shutil.move(dir_path, dest)
+    for file_path in search_result['files_to_move']:
+        shutil.move(file_path, dest)
 
 def main():
     args = init_args()

@@ -2,11 +2,7 @@
 
 import unittest
 import os
-import inspect
 import shutil
-import subprocess as sp
-import time
-from filecmp import dircmp
 import swisspy
 
 import move_by_regex
@@ -80,7 +76,29 @@ class TestSimpleTransfer(unittest.TestCase):
                                                         'move_only_from_spacer')],
                             'files_to_move':[],
                             'paths_matched':['*/move_only_from_spacer'],
-                            'paths_not_matched':['not_found']}
+                            'paths_not_matched':['not_found'],
+                            'redundant_paths':[]}
+
+    def test_files_within_matched_dirs_dont_get_found_by_search_source(self):
+        self.set_up_spacer_test()
+        a_file_path = (swisspy.smooth_join(self.source, 'spacer',
+                                          'move_only_from_spacer',
+                                          'a_file'))
+        with open(a_file_path, 'w') as a_file:
+            a_file.write("DO NOT FIND ME")
+
+        operation = move_by_regex.search_source_for_patterns
+        observed = operation(self.source,
+                             [['spacer','move_only_from_spacer'],
+                              ['spacer', 'move_only_from_spacer', 'a_file']])
+
+        assert observed == {'dirs_to_move':[os.path.join(self.source,
+                                                         'spacer',
+                                                         'move_only_from_spacer')],
+                            'files_to_move':[],
+                            'paths_matched':['spacer/move_only_from_spacer'],
+                            'paths_not_matched':[],
+                            'redundant_paths':['spacer/move_only_from_spacer/a_file']}
 
 
     def test_move_a_directory_from_specified_depth(self):
