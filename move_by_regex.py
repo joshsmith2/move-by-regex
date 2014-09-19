@@ -26,8 +26,9 @@ def split_path(path):
     """Given a path, this will split it into a list where each component is
     a level in the filesystem.
 
-    >>>split_path('/tmp/buttress//pants/./pig.txt')
-    ['tmp','buttress','pants','pig.txt']
+    >>> split_path('/tmp/*/buttress//pants/./pig.txt')
+    ['tmp', '*', 'buttress', 'pants', 'pig.txt']
+
     """
     path_list = os.path.normpath(path).split(os.path.sep)
     # The below needed to remove empty entry in case of a leading slash
@@ -39,8 +40,12 @@ def split_path(path):
 
 def main():
     args = init_args()
-    patterns = get_lines(args.pattern_file)
+    pattern_file = args.pattern_file
+    if pattern_file:
+        patterns = get_lines(pattern_file)
 
 
 if __name__== '__main__':
+    import doctest
+    doctest.testmod()
     main()
