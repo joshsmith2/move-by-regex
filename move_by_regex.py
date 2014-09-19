@@ -2,13 +2,14 @@
 
 import argparse
 import os
+import swisspy
 
 def init_args():
     """ Initialise command line arguments"""
     p = argparse.ArgumentParser(
         description="Move directories whose names, at a given depth, "\
                     "match a given list of files")
-    p.add_argument('-p', '--pattern-file', metavar='PATH', dest='pattern_file',
+    p.add_argument('-p', '--paths-file', metavar='PATH', dest='paths_file',
                    help="Path to a file containing patterns to be moved")
     p.add_argument('-s', '--source', metavar='PATH', dest='source',
                    help="Directory containing the data to be moved")
@@ -53,11 +54,26 @@ def split_path(path):
     else:
         return path_list
 
+def get_patterns(paths):
+    """Take a list of paths, return a list of lists containing split patterns
+    for those paths
+
+    >>> get_patterns(['/tmp/gog', '/tmp/brine/*/pan'])
+    [['tmp', 'gog'], ['tmp', 'brine', '*', 'pan']]
+    """
+    patterns = []
+    for p in paths:
+        patterns.append(split_path(p))
+    return patterns
+
 def main():
     args = init_args()
-    pattern_file = args.pattern_file
-    if pattern_file:
-        patterns = get_lines(pattern_file)
+    current_dir =swisspy. get_dir_currently_running_in()
+    paths_file = args.paths_file
+    if not paths_file:
+         paths_file = swisspy.smooth_join(current_dir, 'enter_paths_here.txt')
+    paths = get_lines(paths_file)
+
 
 
 if __name__== '__main__':
