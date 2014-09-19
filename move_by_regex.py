@@ -16,11 +16,26 @@ def init_args():
                    help="The destination")
     return p.parse_args()
 
-def get_lines(from_path):
-    """Parse a file and return a list of strings"""
+def get_lines(from_path, get_comments=False, comment_char='#'):
+    """Parse a file and return a list of strings, ignoring comments if
+    requested.
+
+    from_path : path
+        The path to the file to be parsed.
+    get_comments : bool
+        If False, ignore lines starting with comment_char
+        Default: False
+    comment_char : str
+        Character denoting comment lines
+        Default : '#'
+    """
     the_file = os.path.abspath(from_path)
     with open(the_file, 'r') as f:
-        return [line.strip() for line in f]
+        if get_comments:
+            out_list = [line.strip() for line in f]
+        else:
+            out_list = [line.strip() for line in f if line[0] != comment_char]
+    return out_list
 
 def split_path(path):
     """Given a path, this will split it into a list where each component is

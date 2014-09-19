@@ -1,0 +1,16 @@
+# In this file, please enter any paths you would like to be moved, 
+# relative to the source directory. You can specify the source 
+# using the -s flag (e.g move-by-regex.py -s /Volumes/Video)
+#
+# You can use * to specify any path, and all lines starting with '#' will 
+# be ignored. 
+#
+# For example, if the source directory is '/Volumes/Video', the following 
+# entry will move all folders with the structure 
+# /Volumes/Video/foot/<anything>/<anything_else>/bart:
+# 
+# foot/*/*/bart
+#
+# You can pass a list of file paths too:
+# 
+# foot/bart/brunt.txt

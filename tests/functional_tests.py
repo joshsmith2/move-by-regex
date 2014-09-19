@@ -10,8 +10,8 @@ import unittest
 import os
 import shutil
 import inspect
+import time
 from filecmp import dircmp
-
 
 def smooth_join(*args):
     """
@@ -42,14 +42,17 @@ class TransferTest(unittest.TestCase):
 
     def setUp(self):
         # Initialise paths
-        root = self.get_dir_currently_running_in()
-        input = smooth_join(root, 'models', 'input')
-        source = smooth_join(root, 'source')
-        input_file = smooth_join(root, 'files_to_move.txt')
+        self.root = self.get_dir_currently_running_in()
+        self.models = smooth_join(self.root, 'models')
+        self.source = smooth_join(self.root, 'source')
+        self.input = smooth_join(self.models, 'input')
+        self.dest = smooth_join(self.root, 'dest')
+        self.input_model = smooth_join(self.models, 'enter_paths_model.txt')
+        self.input_file = smooth_join(self.models, 'enter_paths_here.txt')
 
         # Copy model folder
         try:
-            shutil.rmtree(source)
+            shutil.rmtree(self.source)
         except OSError as e:
             error_number = e[0]
             if error_number == 2: #File doesn't exist
@@ -57,21 +60,17 @@ class TransferTest(unittest.TestCase):
             else:
                 print str(e)
                 raise
+        shutil.copytree(self.input, self.source)
 
-        shutil.copytree(input, source)
-
-        with open(input_file, 'w') as input_file:
+        # Copy and populate input file
+        shutil.copy(self.input_model, self.input_file)
+        with open(self.input_file, 'a') as input_file:
             input_file.write('move_me\nmove_me_too')
 
     def tearDown(self):
-        # Initialise paths
-        root = self.get_dir_currently_running_in()
-        source = smooth_join(root, 'source')
-        input_file = smooth_join(root, 'files_to_move.txt')
-
         # Remove source entirely and recreate it
-        shutil.rmtree(source)
-        os.remove(input_file)
+        shutil.rmtree(self.source)
+        os.remove(self.input_file)
 
     def get_dir_currently_running_in(self):
         """Returns a full path to the directory this script is being run from.
@@ -80,29 +79,16 @@ class TransferTest(unittest.TestCase):
         current_running_dir = os.path.dirname(current_running_path)
         return current_running_dir
 
-    def universals(self):
-        """
-        A way of having global variables without polluting the namespace.
-        """
-
-    def test_always_pass(self):
-        assert True
-
     # MINIMUM VIABLE PRODUCT
 
     # Accept strings (e.g project numbers) from a text file
     # and move any folders named after them from source to dest.
     def test_move_files_matching_string(self):
-        root = self.get_dir_currently_running_in()
-        to_move = smooth_join(root, 'files_to_move.txt')
-        dest = smooth_join(root, 'dest')
-        goal = smooth_join(root,
-                           'models',
-                           'output_test_move_files_matching_string')
-
+        to_move = self.input_file
+        goal = smooth_join(self.models,'output_test_move_files_matching_string')
         ### CALL TO FUNCTION GOES HERE ###
 
-        assert dirs_match(dest, goal)
+        assert dirs_match(self.dest, goal)
 
 
     # Check for matches at / between given depths of the file path
