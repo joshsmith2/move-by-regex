@@ -191,6 +191,49 @@ def search_source_for_patterns(source, patterns):
                 'redundant_paths':redundant_paths}
     return out_dict
 
+def strip_leading_char(from_str, character='/'):
+    """
+    >>> strip_leading_char('/tmp')
+    'tmp'
+    >>> strip_leading_char('tmp')
+    'tmp'
+    """
+    if from_str[0] == character:
+        out = from_str[1:]
+    else:
+        out = from_str
+    return out
+
+def move_creating_intermediaries(source, to_move, dest):
+    """Move a directory to_move from within source to dest, creating any
+    intermediate directories between those two as necessary
+
+    source : str : path
+    to_move : str : path
+        The directory or file to be moved. Must be within source.
+    dest : str : path
+    """
+    if not os.path.normpath(to_move[:len(source)]) == os.path.normpath(source):
+        import sys
+        print "{} is not within {}".format(to_move, source)
+        sys.exit(-1)
+    path_after_source = split_path(strip_leading_char(to_move[len(source):]))
+    path_to_create = ""
+    for p in path_after_source[:-1]:
+        path_to_create = os.path.join(path_to_create, p)
+        try:
+            dest_path = os.path.join(dest, path_to_create)
+            os.mkdir(dest_path)
+        except shutil.Error as e:
+            error_string = "Destination path '{}' "\
+                           "already exists".format(dest_path)
+            if str(e) == error_string:
+                pass
+            else:
+                raise
+    final_destination = os.path.join(dest, path_to_create)
+    shutil.move(to_move, final_destination)
+
 def move_by_regex(source, dest, paths_file):
     if not paths_file:
         swisspy_path = swisspy. get_dir_currently_running_in()
@@ -200,9 +243,10 @@ def move_by_regex(source, dest, paths_file):
     patterns = get_patterns(paths)
     search_result = search_source_for_patterns(source, patterns)
     for dir_path in search_result['dirs_to_move']:
-        shutil.move(dir_path, dest)
+        move_creating_intermediaries(source, dir_path, dest)
     for file_path in search_result['files_to_move']:
-        shutil.move(file_path, dest)
+        move_creating_intermediaries(source, file_path, dest)
+
 
 def main():
     args = init_args()
