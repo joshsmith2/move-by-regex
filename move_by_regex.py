@@ -98,9 +98,9 @@ def glob_equal(candidate, match_to, glob='*'):
         out = False
     return out
 
-def redundant_patterns(from_list):
+def get_redundant_patterns(from_list):
     """
-    >>> redundant_patterns([['a','b','c'], ['a','b']])
+    >>> get_redundant_patterns([['a','b','c'], ['a','b']])
     {'not_redundant': [['a', 'b']], 'redundant': [['a', 'b', 'c']]}
     """
     redundant = []
@@ -143,23 +143,14 @@ def search_source_for_patterns(source, patterns):
     """
     dirs_to_move = []
     files_to_move=[]
-
-    # Maintaining two lists is easier than comparing unsatisfied with patterns
-    to_check = patterns[:]
     satisfied = []
-    redundant = []
 
     # Remove any redundant patterns before going on (e.g ['usr','bin'] is
     # redundant if ['usr'] is present.
-    # TODO: Refactor this so the redunancy checker returns a list.
-    patterns.sort(key = len)
-    for p in patterns:
-        redundant_to_p = redundant_patterns(p, patterns)
-        # Sometimes, with a list of lists, you need to do some unpacking.
-        for r in redundant_to_p:
-            if r not in redundant:
-                redundant.append(r)
-                to_check.remove(r)
+    redundant_patterns_output = get_redundant_patterns(patterns)
+    redundant_patterns = redundant_patterns_output['redundant']
+    to_check = redundant_patterns_output['not_redundant']
+
     for root, dirs, files in os.walk(source):
         walk_depth = path_depth_difference(root, source)
         # Since we remove matches as we go, only to_check representing paths
@@ -180,8 +171,8 @@ def search_source_for_patterns(source, patterns):
                         to_check.remove(p)
                         satisfied.append(p)
             for f in files:
-                if p[walk_depth] == f or p[walk_depth] == '*':
-                    if len(p) == walk_depth - 1:
+                if glob_equal(f, p[walk_depth]):
+                    if len(p) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
                         files.remove(f)
@@ -190,7 +181,7 @@ def search_source_for_patterns(source, patterns):
 
     paths_not_matched = [os.path.sep.join(t) for t in to_check ]
     paths_matched = [os.path.sep.join(s) for s in satisfied]
-    redundant_paths = [os.path.sep.join(r) for r in redundant]
+    redundant_paths = [os.path.sep.join(r) for r in redundant_patterns]
     out_dict = {'dirs_to_move':dirs_to_move,
                 'files_to_move':files_to_move,
                 'paths_matched':paths_matched,
