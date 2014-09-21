@@ -98,25 +98,29 @@ def glob_equal(candidate, match_to, glob='*'):
         out = False
     return out
 
-def redundant_patterns(model, from_list):
+def redundant_patterns(from_list):
     """
-    >>> redundant_patterns(['a','b','c'], [['a','b'],['a','b','c','d']])
-    [['a', 'b', 'c', 'd']]
+    >>> redundant_patterns([['a','b','c'], ['a','b']])
+    {'not_redundant': [['a', 'b']], 'redundant': [['a', 'b', 'c']]}
     """
-    redundant_patterns = []
-    # If model's in from_list, we don't want to return it.
-    try:
-        from_list.remove(model)
-    except ValueError:
-        # Model not in from_list, which is fine.
-        pass
-    for p in from_list:
-        if len(model) <= len(p):
-            for m in model:
-                if m != p[model.index(m)]:
-                    continue
-            redundant_patterns.append(p)
-    return redundant_patterns
+    redundant = []
+    not_redundant = sorted(from_list[:], key=len)
+    for p in not_redundant:
+        # Only interested in pattern longer than p. This will also stop us for
+        # checking p itself.
+        candidates = [n for n in not_redundant if len(n) > len(p)]
+        for c in candidates:
+            # Guilty until proven innocent
+            p_and_c_distinct = False
+            for depth in range(0, len(p) - 1):
+                if not glob_equal(p[depth], c[depth]):
+                    p_and_c_distinct = True
+
+            if not p_and_c_distinct:
+                redundant.append(c)
+                not_redundant.remove(c)
+    return {'redundant': redundant,
+            'not_redundant': not_redundant}
 
 def search_source_for_patterns(source, patterns):
     """
