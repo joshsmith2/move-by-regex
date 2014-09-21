@@ -224,10 +224,8 @@ def move_creating_intermediaries(source, to_move, dest):
         try:
             dest_path = os.path.join(dest, path_to_create)
             os.mkdir(dest_path)
-        except shutil.Error as e:
-            error_string = "Destination path '{}' "\
-                           "already exists".format(dest_path)
-            if str(e) == error_string:
+        except OSError as e:
+            if e[0] == 17: # File exists
                 pass
             else:
                 raise
