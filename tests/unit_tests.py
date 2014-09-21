@@ -4,6 +4,7 @@ import unittest
 import os
 import shutil
 import swisspy
+from pprint import pprint
 
 import move_by_regex
 
@@ -23,24 +24,26 @@ class TestSimpleTransfer(unittest.TestCase):
         self.input_file = swisspy.smooth_join(self.models, 'enter_paths_here.txt')
         self.desired_output = swisspy.smooth_join(self.models, 'desired_output')
 
+        self.clear_dirs()
+
         # Copy model folder
-        try:
-            shutil.rmtree(self.source)
-        except OSError as e:
-            error_number = e[0]
-            if error_number == 2: #File doesn't exist
-                pass
-            else:
-                print str(e)
-                raise
         shutil.copytree(self.input, self.source)
-        shutil.copy(self.input_model, self.input_file)
         os.mkdir(self.desired_output)
+        shutil.copy(self.input_model, self.input_file)
+        os.mkdir(self.dest)
 
     def tearDown(self):
-        shutil.rmtree(self.source)
-        shutil.rmtree(self.desired_output)
-        os.remove(self.input_file)
+        self.clear_dirs()
+
+    def clear_dirs(self):
+        # TODO: Do this properly.
+        try:
+            shutil.rmtree(self.source)
+            shutil.rmtree(self.dest)
+            shutil.rmtree(self.desired_output)
+            os.remove(self.input_file)
+        except OSError:
+            pass
 
     def test_paths_can_be_loaded_from_input_without_comments(self):
         test_input = "a_path\n# A comment"
@@ -71,15 +74,20 @@ class TestSimpleTransfer(unittest.TestCase):
         operation = move_by_regex.search_source_for_patterns
         observed = operation(self.source,
                             [['*','move_only_from_spacer'],['not_found']])
-        assert observed == {'dirs_to_move':[os.path.join(self.source,
-                                                        'spacer',
-                                                        'move_only_from_spacer')],
-                            'files_to_move':[],
-                            'paths_matched':['*/move_only_from_spacer'],
-                            'paths_not_matched':['not_found'],
-                            'redundant_paths':[]}
 
-    def test_files_within_matched_dirs_dont_get_found_by_search_source(self):
+        desired = {'dirs_to_move':[os.path.join(self.source,
+                                                'spacer',
+                                                'move_only_from_spacer')],
+                    'files_to_move':[],
+                    'paths_matched':['*/move_only_from_spacer'],
+                    'paths_not_matched':['not_found'],
+                    'redundant_paths':[]}
+
+        error_msg = "Desired: {}\n Observed: {}".format(pprint(desired),
+                                                        pprint(observed))
+        self.assertEqual(desired, observed, msg=error_msg)
+
+    def test_files_within_matched_dirs_not_found_by_search_source(self):
         self.set_up_spacer_test()
         a_file_path = (swisspy.smooth_join(self.source, 'spacer',
                                           'move_only_from_spacer',
@@ -114,4 +122,4 @@ class TestSimpleTransfer(unittest.TestCase):
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    unittest.main(exit=False)
+    unittest.main(exit=False, verbosity=2)

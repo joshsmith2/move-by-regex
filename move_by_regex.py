@@ -98,12 +98,18 @@ def glob_equal(candidate, match_to, glob='*'):
         out = False
     return out
 
-def find_redundant_patterns(model, from_list):
+def redundant_patterns(model, from_list):
     """
-    >>> find_redundant_patterns(['a','b','c'], [['a','b'],['a','b','c','d']])
+    >>> redundant_patterns(['a','b','c'], [['a','b'],['a','b','c','d']])
     [['a', 'b', 'c', 'd']]
     """
     redundant_patterns = []
+    # If model's in from_list, we don't want to return it.
+    try:
+        from_list.remove(model)
+    except ValueError:
+        # Model not in from_list, which is fine.
+        pass
     for p in from_list:
         if len(model) <= len(p):
             for m in model:
@@ -135,41 +141,50 @@ def search_source_for_patterns(source, patterns):
     files_to_move=[]
 
     # Maintaining two lists is easier than comparing unsatisfied with patterns
-    unsatisfied = patterns[:]
+    to_check = patterns[:]
     satisfied = []
     redundant = []
 
+    # Remove any redundant patterns before going on (e.g ['usr','bin'] is
+    # redundant if ['usr'] is present.
+    # TODO: Refactor this so the redunancy checker returns a list.
+    patterns.sort(key = len)
+    for p in patterns:
+        redundant_to_p = redundant_patterns(p, patterns)
+        # Sometimes, with a list of lists, you need to do some unpacking.
+        for r in redundant_to_p:
+            if r not in redundant:
+                redundant.append(r)
+                to_check.remove(r)
     for root, dirs, files in os.walk(source):
         walk_depth = path_depth_difference(root, source)
-
-        # Since we remove matches as we go, only unsatisfied representing paths
+        # Since we remove matches as we go, only to_check representing paths
         # which are deeper than we've walked so far are eligible to match.
-        possible_patterns = [p for p in unsatisfied if len(p) - 1 >= walk_depth]
+        possible_patterns = [p for p in to_check if len(p) - 1 >= walk_depth]
         if not possible_patterns:
             continue
-        for pattern in possible_patterns:
+        for p in possible_patterns:
             for d in dirs:
-                if glob_equal(d, pattern[walk_depth]):
+                if glob_equal(d, p[walk_depth]):
                     # We've got a match! If that's the end of the pattern,
                     # move this object
-                    if len(pattern) - 1 == walk_depth:
+                    if len(p) - 1 == walk_depth:
                         dir_path = swisspy.smooth_join(root, d)
                         dirs_to_move.append(dir_path)
                         # Remove this dir from dirs to be walked
                         dirs.remove(d)
-                        unsatisfied.remove(pattern)
-                        satisfied.append(pattern)
-
+                        to_check.remove(p)
+                        satisfied.append(p)
             for f in files:
-                if pattern[walk_depth] == f or pattern[walk_depth] == '*':
-                    if len(pattern) == walk_depth - 1:
+                if p[walk_depth] == f or p[walk_depth] == '*':
+                    if len(p) == walk_depth - 1:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
                         files.remove(f)
-                        unsatisfied.remove(pattern)
-                        satisfied.append(pattern)
+                        to_check.remove(p)
+                        satisfied.append(p)
 
-    paths_not_matched = [os.path.sep.join(u) for u in unsatisfied]
+    paths_not_matched = [os.path.sep.join(t) for t in to_check ]
     paths_matched = [os.path.sep.join(s) for s in satisfied]
     redundant_paths = [os.path.sep.join(r) for r in redundant]
     out_dict = {'dirs_to_move':dirs_to_move,
