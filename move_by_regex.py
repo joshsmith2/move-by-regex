@@ -102,18 +102,20 @@ def get_redundant_patterns(from_list):
     """
     >>> get_redundant_patterns([['a','b','c'], ['a','b']])
     {'not_redundant': [['a', 'b']], 'redundant': [['a', 'b', 'c']]}
+    >>> get_redundant_patterns([['a','*'], ['a','b'], ['a','c','f']])
+    {'not_redundant': [['a', '*']], 'redundant': [['a', 'b'], ['a', 'c', 'f']]}
     """
     redundant = []
     not_redundant = sorted(from_list[:], key=len)
     for p in not_redundant:
         # Only interested in pattern longer than p. This will also stop us for
         # checking p itself.
-        candidates = [n for n in not_redundant if len(n) > len(p)]
+        candidates = [n for n in not_redundant if len(n) >= len(p) if n != p]
         for c in candidates:
             # Guilty until proven innocent
             p_and_c_distinct = False
-            for depth in range(0, len(p) - 1):
-                if not glob_equal(p[depth], c[depth]):
+            for depth in range(0, len(p)):
+                if not glob_equal(c[depth], p[depth]):
                     p_and_c_distinct = True
 
             if not p_and_c_distinct:
