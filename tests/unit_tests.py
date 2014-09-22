@@ -37,10 +37,12 @@ class TestSimpleTransfer(unittest.TestCase):
 
     def clear_dirs(self):
         # TODO: Do this properly.
+        for d in [self.source, self.dest, self.desired_output]:
+            try:
+                shutil.rmtree(d)
+            except OSError:
+                pass
         try:
-            shutil.rmtree(self.source)
-            shutil.rmtree(self.dest)
-            shutil.rmtree(self.desired_output)
             os.remove(self.input_file)
         except OSError:
             pass
@@ -85,7 +87,7 @@ class TestSimpleTransfer(unittest.TestCase):
 
         error_msg = "Desired: {}\n Observed: {}".format(pprint(desired),
                                                         pprint(observed))
-        self.assertEqual(desired, observed, msg=error_msg)
+        self.assertEqual(desired, observed)
 
     def test_files_within_matched_dirs_not_found_by_search_source(self):
         self.set_up_spacer_test()
@@ -108,8 +110,17 @@ class TestSimpleTransfer(unittest.TestCase):
                             'paths_not_matched':[],
                             'redundant_paths':['spacer/move_only_from_spacer/a_file']}
 
+    def test_move_a_directory_from_the_root(self):
+        os.mkdir(os.path.join(self.desired_output, 'move_me'))
+        test_input = 'move_me'
+        with open(self.input_file, 'a') as input_file:
+            input_file.write(test_input)
 
-    def test_move_a_directory_from_specified_depth(self):
+        move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
+
+        assert swisspy.dirs_match(self.dest, self.desired_output)
+
+    def test_move_a_directory_from_depth_of_1(self):
         self.set_up_spacer_test()
         test_input = "*/move_only_from_spacer"
         with open(self.input_file, 'a') as input_file:
@@ -118,6 +129,20 @@ class TestSimpleTransfer(unittest.TestCase):
         move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
 
         assert swisspy.dirs_match(self.dest, self.desired_output)
+
+    def test_glob_matches_more_than_one_file(self):
+        test_input = "*/spacer_1"
+        with open(self.input_file, 'a') as input_file:
+            input_file.write(test_input)
+
+        move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
+
+        should_exist = [swisspy.smooth_join(self.dest, 'depth_2', 'spacer_1'),
+                        swisspy.smooth_join(self.dest, 'depth_3', 'spacer_1')]
+        for dir in should_exist:
+            assert os.path.exists(dir)
+
+
 
 if __name__ == '__main__':
     import doctest

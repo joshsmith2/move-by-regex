@@ -44,6 +44,7 @@ class TransferTest(unittest.TestCase):
                 print str(e)
                 raise
         shutil.copytree(self.input, self.source)
+        os.mkdir(self.dest)
 
         # Copy and populate input file
         shutil.copy(self.input_model, self.input_file)
@@ -52,8 +53,19 @@ class TransferTest(unittest.TestCase):
 
     def tearDown(self):
         # Remove source entirely and recreate it
-        shutil.rmtree(self.source)
-        os.remove(self.input_file)
+        self.clear_dirs()
+
+    def clear_dirs(self):
+           # TODO: Do this properly.
+           for d in [self.source, self.dest]:
+               try:
+                   shutil.rmtree(d)
+               except OSError:
+                   pass
+           try:
+               os.remove(self.input_file)
+           except OSError:
+               pass
 
     def get_dir_currently_running_in(self):
         """Returns a full path to the directory this script is being run from.

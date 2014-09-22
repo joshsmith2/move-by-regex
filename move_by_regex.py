@@ -170,20 +170,24 @@ def search_source_for_patterns(source, patterns):
                         dirs_to_move.append(dir_path)
                         # Remove this dir from dirs to be walked
                         dirs.remove(d)
-                        to_check.remove(p)
                         satisfied.append(p)
+                        # Only remove this from the list to check if it doesn't
+                        # contain a glob
+                        if '*' not in p:
+                            to_check.remove(p)
             for f in files:
                 if glob_equal(f, p[walk_depth]):
                     if len(p) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
                         files.remove(f)
-                        to_check.remove(p)
                         satisfied.append(p)
-
-    paths_not_matched = [os.path.sep.join(t) for t in to_check ]
-    paths_matched = [os.path.sep.join(s) for s in satisfied]
-    redundant_paths = [os.path.sep.join(r) for r in redundant_patterns]
+                        if '*' not in p:
+                            to_check.remove(p)
+    sep = os.path.sep
+    paths_not_matched = [sep.join(t) for t in to_check if t not in satisfied]
+    paths_matched = [sep.join(s) for s in satisfied]
+    redundant_paths = [sep.join(r) for r in redundant_patterns]
     out_dict = {'dirs_to_move':dirs_to_move,
                 'files_to_move':files_to_move,
                 'paths_matched':paths_matched,
