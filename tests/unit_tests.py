@@ -10,7 +10,6 @@ import move_by_regex
 
 class TestSimpleTransfer(unittest.TestCase):
 
-
     def setUp(self):
         #Set up variables
         swisspy_root = swisspy.get_dir_currently_running_in()

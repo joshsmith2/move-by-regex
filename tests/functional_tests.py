@@ -61,7 +61,7 @@ class TransferTest(unittest.TestCase):
         self.clear(dirs=[self.source, self.dest],
                    files=[self.input_file, self.log_mod_dest])
 
-    def clear(self, dirs=[], files=[]):
+    def clear(self, dirs=None, files=None):
         """Remove all dirs in dirs and fiiles in files, if they exist."""
         for d in dirs:
             try:
@@ -94,6 +94,7 @@ class TransferTest(unittest.TestCase):
         self.assertTrue(swisspy.dirs_match(self.dest, goal))
 
     # Generate a local file log displaying all directories moved
+    # TODO: At the moment, this test seems to be running twice from Pycharm?
     def test_log_created(self):
         log_file_path = os.path.join(self.logs, 'test_log_created.txt')
 
@@ -108,8 +109,12 @@ class TransferTest(unittest.TestCase):
             contents = log_file.read()
         logs = log_messages.LogMessage()
 
-        assert contents == logs.logfile_header
-        self.fail("More rigorous tests to go, but the last few have passed")
+        self.assertIn(logs.header, contents)
+        self.assertIn(logs.success_story.format(type='directories',
+                                                source=self.source,
+                                                dest=self.dest),
+                      contents)
+
 
     # Read-only mode which only logs and does not move
 
@@ -134,4 +139,4 @@ class TransferTest(unittest.TestCase):
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    unittest.main(exit=False)
+    unittest.main(exit=False, verbosity=2)

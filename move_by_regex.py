@@ -20,6 +20,34 @@ def init_args():
                    help="The destination")
     return p.parse_args()
 
+def init_logging(log_file, log_text):
+    """Set up logging objects for a given log file path
+
+    Excellent explanation of how this works here:
+    https://docs.python.org/2/howto/logging-cookbook.html
+
+    log_file : str : path
+        Path to the human readable log
+    log_text : LogMessage object
+        Object read from log_messages.py
+    """
+    log_file = os.path.abspath(log_file)
+    # Set up logging to file
+    logging.basicConfig(level=logging.INFO,
+                        format='%(name)-15s %(message)s',
+                        datefmt='%m/%d/%Y %H:%M',
+                        filename=log_file,
+                        filemode='w')
+    # Set up logging to console (WARNING and above)
+    to_console = logging.StreamHandler()
+    to_console.setLevel(logging.WARNING)
+    console_formatter = ('%(name)-16s: %(levelname)-8s %(message)s')
+    to_console.setFormatter(console_formatter)
+    # Set up a root level handler, and one for this area
+    logging.getLogger('').addHandler(to_console)
+    init_logger = logging.getLogger('mbr.loginit')
+    init_logger.info(log_text.header)
+
 def get_lines(from_path, get_comments=False, comment_char='#'):
     """Parse a file and return a list of strings, ignoring comments if
     requested.
@@ -56,6 +84,17 @@ def split_path(path):
             return path_list[1:]
     else:
         return path_list
+
+def join_pattern(pattern):
+    """Given a pattern, returns a path
+
+    pattern : list : strings
+        A list representing a file path
+
+    >>> join_pattern(['tmp', 'branst'])
+    'tmp/branst'
+    """
+    return os.path.sep.join(pattern)
 
 def get_patterns(paths):
     """Take a list of paths, return a list of lists containing split patterns
@@ -219,6 +258,8 @@ def move_creating_intermediaries(source, to_move, dest):
         The directory or file to be moved. Must be within source.
     dest : str : path
     """
+    mci_logger = logging.getLogger('mbr.move_ci')
+    successfully_moved = []
     if not os.path.normpath(to_move[:len(source)]) == os.path.normpath(source):
         import sys
         print "{} is not within {}".format(to_move, source)
@@ -236,59 +277,45 @@ def move_creating_intermediaries(source, to_move, dest):
             else:
                 raise
     final_destination = os.path.join(dest, path_to_create)
-    shutil.move(to_move, final_destination)
+    try:
+        shutil.move(to_move, final_destination)
+        successfully_moved.append(path_after_source)
+    except Exception as e:
+        mci_logger.error("Error encountered when moving " + to_move)
+    return successfully_moved
 
 def move_by_regex(source, dest, paths_file="", log_file=""):
+    dir_successes = []
+    file_successes = []
+    log_text = log_messages.LogMessage()
+    main_logger = logging.getLogger('mbr.main')
     swisspy_path = swisspy.get_dir_currently_running_in()
     current_dir = swisspy.smooth_join(swisspy_path, '..')
     if not paths_file:
         paths_file = os.path.join(current_dir, 'enter_paths_here.txt')
     if not log_file:
         log_file = os.path.join(current_dir, 'logs', 'move_log.txt')
-    init_logging(log_file)
+    init_logging(log_file, log_text)
     paths = get_lines(paths_file)
     patterns = get_patterns(paths)
     search_result = search_source_for_patterns(source, patterns)
+
     for dir_path in search_result['dirs_to_move']:
-        move_creating_intermediaries(source, dir_path, dest)
+        dir_successes = move_creating_intermediaries(source, dir_path, dest)
+    if dir_successes:
+        main_logger.info(log_text.success_story.format(type='directories',
+                                                       source=source,
+                                                       dest=dest))
+        for ds in dir_successes:
+            main_logger.info("\t" + join_pattern(ds))
     for file_path in search_result['files_to_move']:
-        move_creating_intermediaries(source, file_path, dest)
-
-def init_logging(log_file):
-    """Set up logging objects for a given log file path
-
-    Excellent explanation of how this works here:
-    https://docs.python.org/2/howto/logging-cookbook.html
-
-    log_file : str : path
-        Path to the human readable log
-    """
-    log_file = os.path.abspath(log_file)
-    # Set up logging to console (WARNING and above)
-    to_console = logging.StreamHandler()
-    to_console.setLevel(logging.WARNING)
-    console_formatter = ('%(name)-16s: %(levelname)-8s %(message)s')
-    to_console.setFormatter(console_formatter)
-
-    # Set up a root level handler, and one for this area
-    logging.getLogger('').addHandler(to_console)
-    init_logger = logging.getLogger('mbr.loginit')
-
-    # Set up file to log to
-    log_text = log_messages.LogMessage()
-    if not os.path.exists(log_file):
-        try:
-            with open(log_file, 'w') as lf:
-                lf.write(log_text.logfile_header)
-        except IOError as e:
-            init_logger.warning('Could not create ' + log_file)
-            raise
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s: %(message)s',
-                        datefmt='%m/%d/%Y %h:%m',
-                        filename=log_file,)
-
-
+        file_successes = move_creating_intermediaries(source, file_path, dest)
+    if file_successes:
+       main_logger.info(log_text.success_story.format(type='files',
+                                                      source=source,
+                                                      dest=dest))
+       for fs in file_successes:
+           main_logger.info("\t" + join_pattern(fs))
 
 def main():
     args = init_args()
