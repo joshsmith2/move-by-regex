@@ -10,10 +10,9 @@ import unittest
 import os
 import shutil
 import inspect
-import time
-from filecmp import dircmp
 import swisspy
 import move_by_regex
+import log_messages
 
 class TransferTest(unittest.TestCase):
 
@@ -24,15 +23,21 @@ class TransferTest(unittest.TestCase):
         self.root = swisspy.swisspy.smooth_join(swisspy_root, '..')
         self.models = swisspy.smooth_join(self.root, 'models')
         self.source = swisspy.smooth_join(self.root, 'source')
-        self.input = swisspy.smooth_join(self.models, 'input')
+        self.logs = swisspy.smooth_join(self.root, 'logs')
         self.dest = swisspy.smooth_join(self.root, 'dest')
-        self.input_model = swisspy.smooth_join(self.models, 'enter_paths_model.txt')
-        self.input_file = swisspy.smooth_join(self.models, 'enter_paths_here.txt')
+        self.input = swisspy.smooth_join(self.models, 'input')
+        self.input_model = swisspy.smooth_join(self.models,
+                                               'enter_paths_model.txt')
+        self.input_file = swisspy.smooth_join(self.models,
+                                              'enter_paths_here.txt')
+        self.log_mod_dest = os.path.join(self.root, 'log_messages.py')
         self.test_input = "move_me\n" \
                           "*/move_me\n" \
                           "move_me_too/i_should_also_be_moved\n" \
                           "# A user comment"
-
+        #Clean sweep
+        self.clear(dirs=[self.source, self.dest],
+                   files=[self.input_file, self.log_mod_dest])
         # Copy model folder
         try:
             shutil.rmtree(self.source)
@@ -51,21 +56,23 @@ class TransferTest(unittest.TestCase):
         with open(self.input_file, 'a') as input_file:
             input_file.write(self.test_input)
 
-    def tearDown(self):
-        # Remove source entirely and recreate it
-        self.clear_dirs()
 
-    def clear_dirs(self):
-           # TODO: Do this properly.
-           for d in [self.source, self.dest]:
-               try:
-                   shutil.rmtree(d)
-               except OSError:
-                   pass
-           try:
-               os.remove(self.input_file)
-           except OSError:
-               pass
+    def tearDown(self):
+        self.clear(dirs=[self.source, self.dest],
+                   files=[self.input_file, self.log_mod_dest])
+
+    def clear(self, dirs=[], files=[]):
+        """Remove all dirs in dirs and fiiles in files, if they exist."""
+        for d in dirs:
+            try:
+                shutil.rmtree(d)
+            except OSError:
+                pass
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
     def get_dir_currently_running_in(self):
         """Returns a full path to the directory this script is being run from.
@@ -84,11 +91,29 @@ class TransferTest(unittest.TestCase):
 
         move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
 
-        assert swisspy.dirs_match(self.dest, goal)
+        self.assertTrue(swisspy.dirs_match(self.dest, goal))
 
-    # Generate a log displaying all directories moved
+    # Generate a local file log displaying all directories moved
+    def test_log_created(self):
+        log_file_path = os.path.join(self.logs, 'test_log_created.txt')
+
+        move_by_regex.move_by_regex(self.source,
+                                    self.dest,
+                                    self.input_file,
+                                    log_file=log_file_path)
+
+        self.assertTrue(os.path.exists(log_file_path),
+                        msg=log_file_path + " does not exist.")
+        with open(log_file_path, 'r') as log_file:
+            contents = log_file.read()
+        logs = log_messages.LogMessage()
+
+        assert contents == logs.logfile_header
+        self.fail("More rigorous tests to go, but the last few have passed")
 
     # Read-only mode which only logs and does not move
+
+    # Ability to run from command line
 
     # NICE FEATURES
 
@@ -99,6 +124,8 @@ class TransferTest(unittest.TestCase):
     # Generate a list showing all files moved
 
     # Log how much data was moved
+
+    # Option to syslog
 
     # Stop before moving to check that the last modified time was before a
     # given date. If not, log when this is, on which file, and hopefully

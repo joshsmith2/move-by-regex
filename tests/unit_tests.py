@@ -143,7 +143,6 @@ class TestSimpleTransfer(unittest.TestCase):
             assert os.path.exists(dir)
 
 
-
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

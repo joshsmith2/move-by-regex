@@ -4,6 +4,8 @@ import argparse
 import os
 import swisspy
 import shutil
+import logging
+import log_messages
 
 def init_args():
     """ Initialise command line arguments"""
@@ -236,11 +238,14 @@ def move_creating_intermediaries(source, to_move, dest):
     final_destination = os.path.join(dest, path_to_create)
     shutil.move(to_move, final_destination)
 
-def move_by_regex(source, dest, paths_file):
+def move_by_regex(source, dest, paths_file="", log_file=""):
+    swisspy_path = swisspy.get_dir_currently_running_in()
+    current_dir = swisspy.smooth_join(swisspy_path, '..')
     if not paths_file:
-        swisspy_path = swisspy. get_dir_currently_running_in()
-        current_dir = swisspy.smooth_join(swisspy_path, '..')
-        paths_file = swisspy.smooth_join(current_dir, 'enter_paths_here.txt')
+        paths_file = os.path.join(current_dir, 'enter_paths_here.txt')
+    if not log_file:
+        log_file = os.path.join(current_dir, 'logs', 'move_log.txt')
+    init_logging(log_file)
     paths = get_lines(paths_file)
     patterns = get_patterns(paths)
     search_result = search_source_for_patterns(source, patterns)
@@ -248,6 +253,41 @@ def move_by_regex(source, dest, paths_file):
         move_creating_intermediaries(source, dir_path, dest)
     for file_path in search_result['files_to_move']:
         move_creating_intermediaries(source, file_path, dest)
+
+def init_logging(log_file):
+    """Set up logging objects for a given log file path
+
+    Excellent explanation of how this works here:
+    https://docs.python.org/2/howto/logging-cookbook.html
+
+    log_file : str : path
+        Path to the human readable log
+    """
+    log_file = os.path.abspath(log_file)
+    # Set up logging to console (WARNING and above)
+    to_console = logging.StreamHandler()
+    to_console.setLevel(logging.WARNING)
+    console_formatter = ('%(name)-16s: %(levelname)-8s %(message)s')
+    to_console.setFormatter(console_formatter)
+
+    # Set up a root level handler, and one for this area
+    logging.getLogger('').addHandler(to_console)
+    init_logger = logging.getLogger('mbr.loginit')
+
+    # Set up file to log to
+    log_text = log_messages.LogMessage()
+    if not os.path.exists(log_file):
+        try:
+            with open(log_file, 'w') as lf:
+                lf.write(log_text.logfile_header)
+        except IOError as e:
+            init_logger.warning('Could not create ' + log_file)
+            raise
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s: %(message)s',
+                        datefmt='%m/%d/%Y %h:%m',
+                        filename=log_file,)
+
 
 
 def main():
