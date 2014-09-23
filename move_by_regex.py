@@ -284,7 +284,7 @@ def move_creating_intermediaries(source, to_move, dest):
         mci_logger.error("Error encountered when moving " + to_move)
     return successfully_moved
 
-def move_by_regex(source, dest, paths_file="", log_file=""):
+def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
     dir_successes = []
     file_successes = []
     log_text = log_messages.LogMessage()
