@@ -4,7 +4,7 @@ import unittest
 import os
 import shutil
 import swisspy
-from pprint import pprint
+import logging
 
 import log_messages
 import move_by_regex
@@ -37,6 +37,8 @@ class TestSimpleTransfer(unittest.TestCase):
 
     def tearDown(self):
         self.clear_dirs()
+        self.remove_all_logging_handlers()
+        logging.shutdown()
 
     def clear_dirs(self):
         # TODO: Do this properly.
@@ -53,6 +55,13 @@ class TestSimpleTransfer(unittest.TestCase):
     def get_log_contents(self):
         with open(self.log_file_path) as log_file:
             return log_file.read()
+
+    def remove_all_logging_handlers(self):
+        """Removes the handlers on all logger instances, in order to ameliorate
+        log confusion between tests."""
+        existing_loggers = logging.Logger.manager.loggerDict
+        for el in existing_loggers:
+            existing_loggers[el].handlers=[]
 
     def test_paths_can_be_loaded_from_input_without_comments(self):
         test_input = "a_path\n# A comment"
@@ -159,6 +168,17 @@ class TestSimpleTransfer(unittest.TestCase):
 
         expected_error = "Destination path '%s' already exists" % guinea_pig_dir
         self.assertIn(expected_error, self.get_log_contents())
+
+    def test_log_unmatched_patterns(self):
+        self.log_file_path = os.path.join(self.logs, 'test_unmatched.txt')
+        with open(self.input_file, 'w') as input_file:
+            input_file.write('emperor_zibzob')
+
+        move_by_regex.move_by_regex(self.source, self.dest, self.input_file,
+                                    self.log_file_path, log_unmatched=True)
+
+        self.assertIn(self.log_text.unmatched_header, self.get_log_contents())
+        self.assertIn('emperor_zibzob', self.get_log_contents())
 
 if __name__ == '__main__':
     import doctest

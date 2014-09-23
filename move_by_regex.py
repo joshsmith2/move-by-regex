@@ -299,7 +299,8 @@ def move_creating_intermediaries(source, to_move, dest):
             mci_logger.exception("Error encountered while moving " + to_move)
     return successfully_moved
 
-def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
+def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
+                  log_unmatched=False):
     dir_successes = []
     file_successes = []
     log_text = log_messages.LogMessage()
@@ -344,6 +345,10 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
                                                           dest=dest))
            for fs in file_successes:
                main_logger.info("\t" + join_pattern(fs))
+    if log_unmatched:
+        main_logger.info(log_text.unmatched_header)
+        for p in search_result['paths_not_matched']:
+            main_logger.info(p)
 
 def main():
     args = init_args()

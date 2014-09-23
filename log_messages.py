@@ -11,10 +11,10 @@ class LogMessage:
                         "transferred from {source} to {dest}:"
         moved_files_header = "{type} moved:"
         found_files_header = "{type} found:"
-        same_file_error="write_it"
+        unmatched_header = "The following patterns were not matched:"
 
         self.header = header
         self.success_story = success_story
         self.moved_files_header = moved_files_header
         self.found_files_header = found_files_header
-        self.same_file_error = same_file_error
+        self.unmatched_header = unmatched_header
