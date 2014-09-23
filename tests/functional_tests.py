@@ -13,6 +13,7 @@ import inspect
 import swisspy
 import move_by_regex
 import log_messages
+import logging
 
 class TransferTest(unittest.TestCase):
 
@@ -26,6 +27,7 @@ class TransferTest(unittest.TestCase):
         self.logs = swisspy.smooth_join(self.root, 'logs')
         self.dest = swisspy.smooth_join(self.root, 'dest')
         self.input = swisspy.smooth_join(self.models, 'input')
+        self.log_file_path = None
         self.input_model = swisspy.smooth_join(self.models,
                                                'enter_paths_model.txt')
         self.input_file = swisspy.smooth_join(self.models,
@@ -36,8 +38,8 @@ class TransferTest(unittest.TestCase):
                           "move_me_too/i_should_also_be_moved\n" \
                           "# A user comment"
         #Clean sweep
-        self.clear(dirs=[self.source, self.dest],
-                   files=[self.input_file, self.log_mod_dest])
+        self.clear(dirs=[self.source, self.dest, self.logs],
+                   files=[self.input_file])
         # Copy model folder
         try:
             shutil.rmtree(self.source)
@@ -46,20 +48,20 @@ class TransferTest(unittest.TestCase):
             if error_number == 2: #File doesn't exist
                 pass
             else:
-                print str(e)
                 raise
         shutil.copytree(self.input, self.source)
         os.mkdir(self.dest)
+        os.mkdir(self.logs)
 
         # Copy and populate input file
         shutil.copy(self.input_model, self.input_file)
         with open(self.input_file, 'a') as input_file:
             input_file.write(self.test_input)
 
-
     def tearDown(self):
-        self.clear(dirs=[self.source, self.dest],
-                   files=[self.input_file, self.log_mod_dest])
+        self.clear(dirs=[self.source, self.dest, self.logs],
+                   files=[self.input_file])
+        logging.shutdown()
 
     def clear(self, dirs=None, files=None):
         """Remove all dirs in dirs and fiiles in files, if they exist."""
@@ -68,10 +70,14 @@ class TransferTest(unittest.TestCase):
                 shutil.rmtree(d)
             except OSError:
                 pass
+            except TypeError:
+                pass
         for f in files:
             try:
                 os.remove(f)
             except OSError:
+                pass
+            except TypeError:
                 pass
 
     def get_dir_currently_running_in(self):
@@ -115,8 +121,27 @@ class TransferTest(unittest.TestCase):
                                                 dest=self.dest),
                       contents)
 
-
     # Read-only mode which only logs and does not move
+    def test_read_only_mode_works(self):
+        self.log_file_path = os.path.join(self.root, 'test_read_only_mode.txt')
+
+        move_by_regex.move_by_regex(self.source,
+                                    self.dest,
+                                    self.input_file,
+                                    log_file=self.log_file_path,
+                                    read_only=True)
+
+        # Check destination empty
+        self.assertFalse(os.listdir(self.dest), msg="Dest is not empty")
+
+        # Check log created with read only message
+        self.assertTrue(os.path.exists(self.log_file_path),
+                        msg=self.log_file_path + " does not exist.")
+        with open(self.log_file_path, 'r') as log_file:
+            contents = log_file.read()
+        self.assertIn("Directories found:", contents)
+
+
 
     # Ability to run from command line
 

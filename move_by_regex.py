@@ -20,6 +20,16 @@ def init_args():
                    help="The destination")
     return p.parse_args()
 
+def init_console_logging():
+    """Currently not implemented."""
+    # Set up logging to console (WARNING and above)
+    to_console = logging.StreamHandler()
+    to_console.setLevel(logging.WARNING)
+    console_formatter = ('%(name)-16s: %(levelname)-8s %(message)s')
+    to_console.setFormatter(console_formatter)
+    # Set up a root level handler, and one for this area
+    logging.getLogger('').addHandler(to_console)
+
 def init_logging(log_file, log_text):
     """Set up logging objects for a given log file path
 
@@ -34,17 +44,10 @@ def init_logging(log_file, log_text):
     log_file = os.path.abspath(log_file)
     # Set up logging to file
     logging.basicConfig(level=logging.INFO,
-                        format='%(name)-15s %(message)s',
+                        format='%(message)s',
                         datefmt='%m/%d/%Y %H:%M',
                         filename=log_file,
                         filemode='w')
-    # Set up logging to console (WARNING and above)
-    to_console = logging.StreamHandler()
-    to_console.setLevel(logging.WARNING)
-    console_formatter = ('%(name)-16s: %(levelname)-8s %(message)s')
-    to_console.setFormatter(console_formatter)
-    # Set up a root level handler, and one for this area
-    logging.getLogger('').addHandler(to_console)
     init_logger = logging.getLogger('mbr.loginit')
     init_logger.info(log_text.header)
 
@@ -288,7 +291,6 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
     dir_successes = []
     file_successes = []
     log_text = log_messages.LogMessage()
-    main_logger = logging.getLogger('mbr.main')
     swisspy_path = swisspy.get_dir_currently_running_in()
     current_dir = swisspy.smooth_join(swisspy_path, '..')
     if not paths_file:
@@ -296,26 +298,38 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
     if not log_file:
         log_file = os.path.join(current_dir, 'logs', 'move_log.txt')
     init_logging(log_file, log_text)
+    main_logger = logging.getLogger('mbr.main')
     paths = get_lines(paths_file)
     patterns = get_patterns(paths)
     search_result = search_source_for_patterns(source, patterns)
-
-    for dir_path in search_result['dirs_to_move']:
-        dir_successes = move_creating_intermediaries(source, dir_path, dest)
-    if dir_successes:
-        main_logger.info(log_text.success_story.format(type='directories',
-                                                       source=source,
-                                                       dest=dest))
-        for ds in dir_successes:
-            main_logger.info("\t" + join_pattern(ds))
-    for file_path in search_result['files_to_move']:
-        file_successes = move_creating_intermediaries(source, file_path, dest)
-    if file_successes:
-       main_logger.info(log_text.success_story.format(type='files',
-                                                      source=source,
-                                                      dest=dest))
-       for fs in file_successes:
-           main_logger.info("\t" + join_pattern(fs))
+    if read_only:
+        if search_result['dirs_to_move']:
+            main_logger.info(log_text.found_files_header.format(type='Directories'))
+            main_logger.info('\n\t'.join(search_result['dirs_to_move']))
+        if search_result['files_to_move']:
+            main_logger.info(log_text.found_files_header.format(type='Files'))
+            main_logger.info('\n\t'.join(search_result['files_to_move']))
+    else:
+        for dir_path in search_result['dirs_to_move']:
+            dir_successes = move_creating_intermediaries(source,
+                                                         dir_path,
+                                                         dest)
+        if dir_successes:
+            main_logger.info(log_text.success_story.format(type='directories',
+                                                           source=source,
+                                                           dest=dest))
+            for ds in dir_successes:
+                main_logger.info("\t" + join_pattern(ds))
+        for file_path in search_result['files_to_move']:
+            file_successes = move_creating_intermediaries(source,
+                                                          file_path,
+                                                          dest)
+        if file_successes:
+           main_logger.info(log_text.success_story.format(type='files',
+                                                          source=source,
+                                                          dest=dest))
+           for fs in file_successes:
+               main_logger.info("\t" + join_pattern(fs))
 
 def main():
     args = init_args()

@@ -9,10 +9,10 @@ class LogMessage:
                  "specified subfolders from one place to another.\n"
         success_story = "The following {type} were successfully " \
                         "transferred from {source} to {dest}:"
-        moved_files_list_header = "Files moved:"
-        found_files_list_header = "Files found:"
+        moved_files_header = "{type} moved:"
+        found_files_header = "{type} found:"
 
         self.header = header
         self.success_story = success_story
-        self.moved_files_list_header = moved_files_list_header
-        self.found_files_list_header = found_files_list_header
+        self.moved_files_header = moved_files_header
+        self.found_files_header = found_files_header
