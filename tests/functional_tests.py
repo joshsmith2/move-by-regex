@@ -14,6 +14,7 @@ import swisspy
 import move_by_regex
 import log_messages
 import logging
+import subprocess as sp
 
 class TransferTest(unittest.TestCase):
 
@@ -28,6 +29,7 @@ class TransferTest(unittest.TestCase):
         self.dest = swisspy.smooth_join(self.root, 'dest')
         self.input = swisspy.smooth_join(self.models, 'input')
         self.log_file_path = None
+        self.log_text = log_messages.LogMessage()
         self.input_model = swisspy.smooth_join(self.models,
                                                'enter_paths_model.txt')
         self.input_file = swisspy.smooth_join(self.models,
@@ -113,10 +115,9 @@ class TransferTest(unittest.TestCase):
                         msg=log_file_path + " does not exist.")
         with open(log_file_path, 'r') as log_file:
             contents = log_file.read()
-        logs = log_messages.LogMessage()
 
-        self.assertIn(logs.header, contents)
-        self.assertIn(logs.success_story.format(type='directories',
+        self.assertIn(self.log_text.header, contents)
+        self.assertIn(self.log_text.success_story.format(type='directories',
                                                 source=self.source,
                                                 dest=self.dest),
                       contents)
@@ -144,8 +145,33 @@ class TransferTest(unittest.TestCase):
 
 
     # Ability to run from command line
+    def test_command_line_flags(self):
+        self.log_file_path = os.path.join(self.logs, 'test_cl_flags.txt')
+        command_list=[
+            os.path.join(self.root, '..', 'move_by_regex.py'),
+            "-s", self.source,
+            "-d", self.dest,
+            "-p", self.input_file,
+            "-l", self.log_file_path,]
+        goal = swisspy.smooth_join(self.models,
+                                   'output_test_move_files_matching_string')
+
+        sp.call(command_list)
+
+        self.assertTrue(swisspy.dirs_match(self.dest, goal))
+        # Check log created with read only message
+        self.assertTrue(os.path.exists(self.log_file_path),
+                        msg=self.log_file_path + " does not exist.")
+        with open(self.log_file_path, 'r') as log_file:
+            contents = log_file.read()
+        self.assertIn(self.log_text.success_story.format(type="directories",
+                                                         source=self.source,
+                                                         dest=self.dest),
+                      contents)
 
     # NICE FEATURES
+
+    # Option to run without logging
 
     # Regex support within paths
 
@@ -160,6 +186,8 @@ class TransferTest(unittest.TestCase):
     # Stop before moving to check that the last modified time was before a
     # given date. If not, log when this is, on which file, and hopefully
     # whodunnit.
+
+
 
 if __name__ == '__main__':
     import doctest

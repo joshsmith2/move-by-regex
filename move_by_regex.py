@@ -12,12 +12,21 @@ def init_args():
     p = argparse.ArgumentParser(
         description="Move directories whose names, at a given depth, "\
                     "match a given list of files")
-    p.add_argument('-p', '--paths-file', metavar='PATH', dest='paths_file',
-                   help="Path to a file containing patterns to be moved")
-    p.add_argument('-s', '--source', metavar='PATH', dest='source',
+    p.add_argument('-s', '--source', metavar='path', type=str,
+                   dest='source',
                    help="Directory containing the data to be moved")
-    p.add_argument('-d', '--dest', metavar='PATH', dest='dest',
+    p.add_argument('-d', '--dest', metavar='path', type=str,
+                   dest='dest',
                    help="The destination")
+    p.add_argument('-p', '--paths-file', metavar='path', type=str,
+                   dest='paths_file',
+                   help="Path to a file containing patterns to be moved")
+    p.add_argument('-l', '--log-file', metavar='path', type=str,
+                   dest='log_file', default=None,
+                   help="Path to log file")
+    p.add_argument('-r', '--read-only', action='store_true', default=False,
+                   dest='read_only',
+                   help="Run in read only mode - log but don't move.")
     return p.parse_args()
 
 def init_console_logging():
@@ -333,7 +342,8 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
 
 def main():
     args = init_args()
-    pass
+    move_by_regex(args.source, args.dest, args.paths_file, args.log_file,
+                  args.read_only)
 
 if __name__== '__main__':
     import doctest

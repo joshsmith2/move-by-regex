@@ -30,13 +30,14 @@ class TestSimpleTransfer(unittest.TestCase):
         os.mkdir(self.desired_output)
         shutil.copy(self.input_model, self.input_file)
         os.mkdir(self.dest)
+        os.mkdir(self.logs)
 
     def tearDown(self):
         self.clear_dirs()
 
     def clear_dirs(self):
         # TODO: Do this properly.
-        for d in [self.source, self.dest, self.desired_output]:
+        for d in [self.source, self.dest, self.desired_output, self.logs]:
             try:
                 shutil.rmtree(d)
             except OSError:
