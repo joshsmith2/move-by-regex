@@ -92,8 +92,6 @@ class TestSimpleTransfer(unittest.TestCase):
                     'paths_not_matched':['not_found'],
                     'redundant_paths':[]}
 
-        error_msg = "Desired: {}\n Observed: {}".format(pprint(desired),
-                                                        pprint(observed))
         self.assertEqual(desired, observed)
 
     def test_files_within_matched_dirs_not_found_by_search_source(self):
@@ -150,14 +148,17 @@ class TestSimpleTransfer(unittest.TestCase):
             assert os.path.exists(dir)
 
     def test_error_generated_on_moving_same_file(self):
-        os.mkdir(os.path.join(self.dest, 'move_me'))
+        guinea_pig_dir = os.path.join(self.dest, 'move_me')
+        os.mkdir(guinea_pig_dir)
         self.log_file_path = os.path.join(self.logs, 'test_samefile_error.txt')
-
+        with open(self.input_file, 'w') as input_file:
+            input_file.write('move_me')
 
         move_by_regex.move_by_regex(self.source, self.dest, self.input_file,
                                     self.log_file_path)
 
-        self.assertIn(self.log_text.same_file_error, self.get_log_contents())
+        expected_error = "Destination path '%s' already exists" % guinea_pig_dir
+        self.assertIn(expected_error, self.get_log_contents())
 
 if __name__ == '__main__':
     import doctest

@@ -292,8 +292,11 @@ def move_creating_intermediaries(source, to_move, dest):
     try:
         shutil.move(to_move, final_destination)
         successfully_moved.append(path_after_source)
-    except Exception as e:
-        mci_logger.exception("Error while moving " + path_after_source)
+    except shutil.Error as e:
+        if "Destination path" in e.message and "already exists in e.message":
+            mci_logger.info(e)
+        else:
+            mci_logger.exception("Error encountered while moving " + to_move)
     return successfully_moved
 
 def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
