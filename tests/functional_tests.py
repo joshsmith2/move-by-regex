@@ -108,15 +108,15 @@ class TransferTest(unittest.TestCase):
     # Generate a local file log displaying all directories moved
     # TODO: At the moment, this test seems to be running twice from Pycharm?
     def test_log_created(self):
-        log_file_path = os.path.join(self.logs, 'test_log_created.txt')
+        self.log_file_path = os.path.join(self.logs, 'test_log_created.txt')
 
         move_by_regex.move_by_regex(self.source,
                                     self.dest,
                                     self.input_file,
-                                    log_file=log_file_path)
+                                    log_file=self.log_file_path)
 
-        self.assertTrue(os.path.exists(log_file_path),
-                        msg=log_file_path + " does not exist.")
+        self.assertTrue(os.path.exists(self.log_file_path),
+                        msg=self.log_file_path + " does not exist.")
         contents = self.get_log_contents()
 
         self.assertIn(self.log_text.header, contents)
