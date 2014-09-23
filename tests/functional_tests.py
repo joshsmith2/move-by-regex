@@ -89,6 +89,10 @@ class TransferTest(unittest.TestCase):
         current_running_dir = os.path.dirname(current_running_path)
         return current_running_dir
 
+    def get_log_contents(self):
+        with open(self.log_file_path) as log_file:
+            return log_file.read()
+
     # MINIMUM VIABLE PRODUCT
 
     # Accept paths from a text file and move any matching folders or files
@@ -113,13 +117,12 @@ class TransferTest(unittest.TestCase):
 
         self.assertTrue(os.path.exists(log_file_path),
                         msg=log_file_path + " does not exist.")
-        with open(log_file_path, 'r') as log_file:
-            contents = log_file.read()
+        contents = self.get_log_contents()
 
         self.assertIn(self.log_text.header, contents)
         self.assertIn(self.log_text.success_story.format(type='directories',
-                                                source=self.source,
-                                                dest=self.dest),
+                                                         source=self.source,
+                                                         dest=self.dest),
                       contents)
 
     # Read-only mode which only logs and does not move
@@ -138,8 +141,7 @@ class TransferTest(unittest.TestCase):
         # Check log created with read only message
         self.assertTrue(os.path.exists(self.log_file_path),
                         msg=self.log_file_path + " does not exist.")
-        with open(self.log_file_path, 'r') as log_file:
-            contents = log_file.read()
+        contents = self.get_log_contents()
         self.assertIn("Directories found:", contents)
 
 
@@ -171,7 +173,7 @@ class TransferTest(unittest.TestCase):
 
     # NICE FEATURES
 
-    # Option to run without logging
+    # Log to console if no log path specified
 
     # Regex support within paths
 

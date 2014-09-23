@@ -6,6 +6,7 @@ import shutil
 import swisspy
 from pprint import pprint
 
+import log_messages
 import move_by_regex
 
 class TestSimpleTransfer(unittest.TestCase):
@@ -18,6 +19,8 @@ class TestSimpleTransfer(unittest.TestCase):
         self.source = swisspy.smooth_join(self.root, 'source')
         self.dest = swisspy.smooth_join(self.root, 'dest')
         self.logs = swisspy.smooth_join(self.root, 'logs')
+        self.log_text = log_messages.LogMessage()
+        self.log_file_path = None
         self.input = swisspy.smooth_join(self.models, 'input')
         self.input_model = swisspy.smooth_join(self.models, 'enter_paths_model.txt')
         self.input_file = swisspy.smooth_join(self.models, 'enter_paths_here.txt')
@@ -46,6 +49,10 @@ class TestSimpleTransfer(unittest.TestCase):
             os.remove(self.input_file)
         except OSError:
             pass
+
+    def get_log_contents(self):
+        with open(self.log_file_path) as log_file:
+            return log_file.read()
 
     def test_paths_can_be_loaded_from_input_without_comments(self):
         test_input = "a_path\n# A comment"
@@ -142,6 +149,15 @@ class TestSimpleTransfer(unittest.TestCase):
         for dir in should_exist:
             assert os.path.exists(dir)
 
+    def test_error_generated_on_moving_same_file(self):
+        os.mkdir(os.path.join(self.dest, 'move_me'))
+        self.log_file_path = os.path.join(self.logs, 'test_samefile_error.txt')
+
+
+        move_by_regex.move_by_regex(self.source, self.dest, self.input_file,
+                                    self.log_file_path)
+
+        self.assertIn(self.log_text.same_file_error, self.get_log_contents())
 
 if __name__ == '__main__':
     import doctest

@@ -293,7 +293,7 @@ def move_creating_intermediaries(source, to_move, dest):
         shutil.move(to_move, final_destination)
         successfully_moved.append(path_after_source)
     except Exception as e:
-        mci_logger.error("Error encountered when moving " + to_move)
+        mci_logger.exception("Error while moving " + path_after_source)
     return successfully_moved
 
 def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
@@ -314,10 +314,12 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False):
     if read_only:
         if search_result['dirs_to_move']:
             main_logger.info(log_text.found_files_header.format(type='Directories'))
-            main_logger.info('\n\t'.join(search_result['dirs_to_move']))
+            main_logger.info('\n\t' +\
+                             '\n\t'.join(search_result['dirs_to_move']))
         if search_result['files_to_move']:
             main_logger.info(log_text.found_files_header.format(type='Files'))
-            main_logger.info('\n\t'.join(search_result['files_to_move']))
+            main_logger.info('\n\t' +\
+                             '\n\t'.join(search_result['files_to_move']))
     else:
         for dir_path in search_result['dirs_to_move']:
             dir_successes = move_creating_intermediaries(source,
