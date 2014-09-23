@@ -27,6 +27,9 @@ def init_args():
     p.add_argument('-r', '--read-only', action='store_true', default=False,
                    dest='read_only',
                    help="Run in read only mode - log but don't move.")
+    p.add_argument('--log-unmatched', action='store_true', default=False,
+                   dest='log_unmatched',
+                   help="Log any paths which were not found in source")
     return p.parse_args()
 
 def init_console_logging():
@@ -353,7 +356,7 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
 def main():
     args = init_args()
     move_by_regex(args.source, args.dest, args.paths_file, args.log_file,
-                  args.read_only)
+                  args.read_only, args.log_unmatched)
 
 if __name__== '__main__':
     import doctest
