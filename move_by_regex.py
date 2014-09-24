@@ -8,6 +8,64 @@ import logging
 import log_messages
 import re
 
+class PatternPiece:
+    """Part of a pattern, which itself is a divided path.
+    E.g:
+      path:               '/tmp/'
+      pattern:            ['tmp']
+      PatternPiece.name:  'tmp'
+      PatternPiece.type:  'string'
+      ...
+    """
+    def __init__(self, name,
+                 regex_ind_start="regex{",
+                 regex_ind_end="}",
+                 glob_pattern='*',):
+        """Initialises a number of useful variables concerning the object:
+
+        self.name : str
+            The string passed as input to create this object - e.g 'tmp' or
+            'regex{.*}'
+        self.regex_ind_start : str : default 'regex{'
+        self.regex_ind_end : str : default '}'
+            Used to denote the start and end, respectively, of a string
+            to be interpreted as a regex pattern
+        self.glob_pattern : str : default '*'
+            A wildcard which will match any string
+
+        >>> p = PatternPiece('bramblescrant')
+        >>> p.name
+        'bramblescrant'
+        >>> p.type
+        'string'
+        >>> p.regex_pattern
+
+
+        >>> q = PatternPiece('{[Ww]hee+}', regex_ind_start='{', regex_ind_end='}')
+        >>> q.name
+        '{[Ww]hee+}'
+        >>> q.type
+        'regex'
+        >>> q.regex_pattern
+        '[Ww]hee+'
+
+        """
+        self.name = name
+        self.regex_ind_start = regex_ind_start
+        self.regex_ind_end = regex_ind_end
+        self.glob_pattern = glob_pattern
+        self.regex_pattern = None
+
+        if self.name[:len(self.regex_ind_start)] == self.regex_ind_start and \
+           self.name[-len(self.regex_ind_end):] == self.regex_ind_end:
+            self.type = 'regex'
+            regex_pattern = self.name[len(regex_ind_start):-len(regex_ind_end)]
+            self.regex_pattern = regex_pattern
+        elif self.name == self.glob_pattern:
+            self.type = 'glob'
+        else:
+            self.type = 'string'
+
 def init_args(current_dir):
     """ Initialise command line arguments"""
     p = argparse.ArgumentParser(
@@ -139,38 +197,37 @@ def path_depth_difference(path1, path2):
     path2_depth = len(os.path.normpath(path2).split(os.path.sep))
     return abs(path1_depth - path2_depth)
 
-def match(match_to, input,
-          glob='*',
-          regex_ind_start='regex{',
-          regex_ind_end='}'):
+def match(match_to, input):
     """Compare a string using either a glob or regex match, depending on
-    whether the defined regex indicators are present.
+    whether the defined regex indicators are present. Return true or false.
 
-    # Glob matches:
-    >>> match('hive', 'hive')
+    match_to : PatternPiece
+        PatternPiece objects contain information on what type of string they
+        are (see their docs)
+    input : str
+
+    # Glob and string matches:
+    >>> string_example = PatternPiece('hive')
+    >>> match(string_example, 'hive')
     True
-    >>> match('hive','handrews')
+    >>> match(string_example,'handrews')
     False
-    >>> match('*', 'anything')
-    True
-    >>> match('&', 'anything', glob='&')
+    >>> glob_example = PatternPiece('*')
+    >>> match(glob_example, 'anything')
     True
 
     # Regex matches:
-    >>> match('regex{.*}', 'anything')
-    True
-    >>> match('{{[Pp]amp}}', 'Pamp', regex_ind_start='{{', regex_ind_end='}}')
+    >>> regex_example = PatternPiece('regex{[Pp]amp}')
+    >>> match(regex_example, 'Pamp')
     True
     """
-    if match_to[:len(regex_ind_start)] == regex_ind_start and \
-       match_to[-len(regex_ind_end):] == regex_ind_end:
-        regex_string = match_to[len(regex_ind_start):-len(regex_ind_end)]
-        if re.match(regex_string, input):
+    if match_to.type == 'regex':
+        if re.match(match_to.regex_pattern, input):
             out = True
         else:
             out = False
     else:
-        if input == match_to or match_to == glob:
+        if input == match_to.name or match_to.type == 'glob':
             out = True
         else:
             out = False
@@ -194,9 +251,11 @@ def get_redundant_patterns(from_list):
             # Guilty until proven innocent
             p_and_c_distinct = False
             for depth in range(0, len(p)):
-                if not match(p[depth], c[depth]):
+                # Conversion to PatternPiece here allows us to use match,
+                # which handles globs and regex gracefully
+                p_piece = PatternPiece(p[depth])
+                if not match(p_piece, c[depth]):
                     p_and_c_distinct = True
-
             if not p_and_c_distinct:
                 redundant.append(c)
                 not_redundant.remove(c)
@@ -270,7 +329,7 @@ def search_source_for_patterns(source, patterns,
                         if '*' not in p:
                             to_check.remove(p)
             for f in files:
-                if glob_equal(f, to_match):
+                if match(f, to_match):
                     if len(p) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)

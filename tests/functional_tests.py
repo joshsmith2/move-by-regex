@@ -106,7 +106,6 @@ class TransferTest(unittest.TestCase):
         self.assertTrue(swisspy.dirs_match(self.dest, goal))
 
     # Generate a local file log displaying all directories moved
-    # TODO: At the moment, this test seems to be running twice from Pycharm?
     def test_log_created(self):
         move_by_regex.move_by_regex(self.source,
                                     self.dest,
