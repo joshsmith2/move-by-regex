@@ -61,9 +61,9 @@ class TransferTest(unittest.TestCase):
             input_file.write(self.test_input)
 
     def tearDown(self):
+        logging.shutdown()
         self.clear(dirs=[self.source, self.dest, self.logs],
                    files=[self.input_file])
-        logging.shutdown()
 
     def clear(self, dirs=None, files=None):
         """Remove all dirs in dirs and fiiles in files, if they exist."""
@@ -171,9 +171,37 @@ class TransferTest(unittest.TestCase):
 
     # NICE FEATURES
 
-    # Log to console if no log path specified
-
     # Regex support within paths
+    def test_regex_matching_correctly(self):
+        self.log_file_path = os.path.join(self.logs, 'regex_match_log.txt')
+        test_strings = ['[pw]eebles', 'l?ummox', '(ben|bill)_and_\1' ]
+        with open(self.input_file, 'w') as input_file:
+            for t in test_strings:
+                input_file.write("container/regex{" + t + "}")
+        container = os.path.join(self.source, 'container')
+        os.mkdir(container)
+        # Test directories to put the regex through its paces. Two successes and
+        # a failure for each.
+        test_dirs = {'succeed':['peebles', 'weebles',
+                                'lummox', 'ummox',
+                                'bill_and_bill', 'ben_and_ben'],
+                     'fail':['Beebles', 'mummox', 'bill_and_ben']}
+
+        for t in test_dirs['succeed']:
+            os.mkdir(os.path.join(container, t))
+        for t in test_dirs['fail']:
+            os.mkdir(os.path.join(container, t))
+
+        move_by_regex.move_by_regex(self.source, self.dest, self.input_file,
+                                    self.log_file_path)
+
+        dest_contents = os.listdir(swisspy.smooth_join(self.dest, 'container'))
+        for s in test_dirs['succeed']:
+            self.assertIn(s, dest_contents)
+        for f in test_dirs['fail']:
+            self.assertNotIn(f, dest_contents)
+
+    # Log to console if no log path specified
 
     # Option for a universal match at any depth
 
