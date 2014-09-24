@@ -4,9 +4,9 @@ import argparse
 import os
 import swisspy
 import shutil
-import sys
 import logging
 import log_messages
+import re
 
 def init_args(current_dir):
     """ Initialise command line arguments"""
@@ -139,21 +139,41 @@ def path_depth_difference(path1, path2):
     path2_depth = len(os.path.normpath(path2).split(os.path.sep))
     return abs(path1_depth - path2_depth)
 
-def glob_equal(candidate, match_to, glob='*'):
-    """
-    >>> glob_equal('hive', 'hive')
+def match(match_to, input,
+          glob='*',
+          regex_ind_start='regex{',
+          regex_ind_end='}'):
+    """Compare a string using either a glob or regex match, depending on
+    whether the defined regex indicators are present.
+
+    # Glob matches:
+    >>> match('hive', 'hive')
     True
-    >>> glob_equal('hive','handrews')
+    >>> match('hive','handrews')
     False
-    >>> glob_equal('anything', '*')
+    >>> match('*', 'anything')
     True
-    >>> glob_equal('anything', '&', glob='&')
+    >>> match('&', 'anything', glob='&')
+    True
+
+    # Regex matches:
+    >>> match('regex{.*}', 'anything')
+    True
+    >>> match('{{[Pp]amp}}', 'Pamp', regex_ind_start='{{', regex_ind_end='}}')
     True
     """
-    if candidate == match_to or match_to == glob:
-        out = True
+    if match_to[:len(regex_ind_start)] == regex_ind_start and \
+       match_to[-len(regex_ind_end):] == regex_ind_end:
+        regex_string = match_to[len(regex_ind_start):-len(regex_ind_end)]
+        if re.match(regex_string, input):
+            out = True
+        else:
+            out = False
     else:
-        out = False
+        if input == match_to or match_to == glob:
+            out = True
+        else:
+            out = False
     return out
 
 def get_redundant_patterns(from_list):
@@ -162,6 +182,7 @@ def get_redundant_patterns(from_list):
     {'not_redundant': [['a', 'b']], 'redundant': [['a', 'b', 'c']]}
     >>> get_redundant_patterns([['a','*'], ['a','b'], ['a','c','f']])
     {'not_redundant': [['a', '*']], 'redundant': [['a', 'b'], ['a', 'c', 'f']]}
+
     """
     redundant = []
     not_redundant = sorted(from_list[:], key=len)
@@ -173,7 +194,7 @@ def get_redundant_patterns(from_list):
             # Guilty until proven innocent
             p_and_c_distinct = False
             for depth in range(0, len(p)):
-                if not glob_equal(c[depth], p[depth]):
+                if not match(p[depth], c[depth]):
                     p_and_c_distinct = True
 
             if not p_and_c_distinct:
@@ -182,7 +203,8 @@ def get_redundant_patterns(from_list):
     return {'redundant': redundant,
             'not_redundant': not_redundant}
 
-def search_source_for_patterns(source, patterns):
+def search_source_for_patterns(source, patterns,
+                               regex_ind_start=None, regex_ind_end=None):
     """
     Walk the source directory and return a list of paths which match patterns.
     This is the meat. If anything's gone awry, it's probably this function.
@@ -191,6 +213,10 @@ def search_source_for_patterns(source, patterns):
         The source directory to search for patterns
     patterns : list : lists
         A list of patterns
+    regex_ind_start : str
+        String indicating the beginning of a regex pattern
+    regex_ind_end : str
+        String indicating the end of a regex pattern
 
     :return dict
         {'dirs_to_move' : list of dirs to move,
@@ -199,11 +225,13 @@ def search_source_for_patterns(source, patterns):
          'paths_not_matched' : list of paths queried but not found in source
          'redundant_paths' : list of paths not searched as a parent dir had
                              already been found}
+         'invalid_regex' : Invalid regex patterns encountered.
 
     """
     dirs_to_move = []
     files_to_move=[]
     satisfied = []
+    invalid_regex = []
 
     # Remove any redundant patterns before going on (e.g ['usr','bin'] is
     # redundant if ['usr'] is present.
@@ -219,8 +247,16 @@ def search_source_for_patterns(source, patterns):
         if not possible_patterns:
             continue
         for p in possible_patterns:
+            to_match = p[walk_depth]
             for d in dirs:
-                if glob_equal(d, p[walk_depth]):
+                try:
+                    paths_match = match(d, to_match)
+                except Exception as e:
+                    if p not in invalid_regex:
+                        invalid_regex.append(p)
+                    to_check.remove(p)
+                    continue
+                if match(d, to_match):
                     # We've got a match! If that's the end of the pattern,
                     # move this object
                     if len(p) - 1 == walk_depth:
@@ -234,7 +270,7 @@ def search_source_for_patterns(source, patterns):
                         if '*' not in p:
                             to_check.remove(p)
             for f in files:
-                if glob_equal(f, p[walk_depth]):
+                if glob_equal(f, to_match):
                     if len(p) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
@@ -250,7 +286,8 @@ def search_source_for_patterns(source, patterns):
                 'files_to_move':files_to_move,
                 'paths_matched':paths_matched,
                 'paths_not_matched':paths_not_matched,
-                'redundant_paths':redundant_paths}
+                'redundant_paths':redundant_paths,
+                'invalid_regex':invalid_regex,}
     return out_dict
 
 def strip_leading_char(from_str, character='/'):
