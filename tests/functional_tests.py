@@ -28,7 +28,7 @@ class TransferTest(unittest.TestCase):
         self.logs = swisspy.smooth_join(self.root, 'logs')
         self.dest = swisspy.smooth_join(self.root, 'dest')
         self.input = swisspy.smooth_join(self.models, 'input')
-        self.log_file_path = None
+        self.log_file_path = os.path.join(self.logs, 'test_log_output.txt')
         self.log_text = log_messages.LogMessage()
         self.input_model = swisspy.smooth_join(self.models,
                                                'enter_paths_model.txt')
@@ -108,8 +108,6 @@ class TransferTest(unittest.TestCase):
     # Generate a local file log displaying all directories moved
     # TODO: At the moment, this test seems to be running twice from Pycharm?
     def test_log_created(self):
-        self.log_file_path = os.path.join(self.logs, 'test_log_created.txt')
-
         move_by_regex.move_by_regex(self.source,
                                     self.dest,
                                     self.input_file,
@@ -127,8 +125,6 @@ class TransferTest(unittest.TestCase):
 
     # Read-only mode which only logs and does not move
     def test_read_only_mode_works(self):
-        self.log_file_path = os.path.join(self.root, 'test_read_only_mode.txt')
-
         move_by_regex.move_by_regex(self.source,
                                     self.dest,
                                     self.input_file,
@@ -146,7 +142,6 @@ class TransferTest(unittest.TestCase):
 
     # Ability to run from command line
     def test_command_line_flags(self):
-        self.log_file_path = os.path.join(self.logs, 'test_cl_flags.txt')
         command_list=[
             os.path.join(self.root, '..', 'move_by_regex.py'),
             "-s", self.source,
@@ -173,7 +168,6 @@ class TransferTest(unittest.TestCase):
 
     # Regex support within paths
     def test_regex_matching_correctly(self):
-        self.log_file_path = os.path.join(self.logs, 'regex_match_log.txt')
         test_strings = ['[pw]eebles', 'l?ummox', '(ben|bill)_and_\1' ]
         with open(self.input_file, 'w') as input_file:
             for t in test_strings:

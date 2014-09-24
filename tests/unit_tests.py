@@ -21,7 +21,7 @@ class TestSimpleTransfer(unittest.TestCase):
         self.dest = swisspy.smooth_join(self.root, 'dest')
         self.logs = swisspy.smooth_join(self.root, 'logs')
         self.log_text = log_messages.LogMessage()
-        self.log_file_path = None
+        self.log_file_path = os.path.join(self.logs, 'test_log_output.txt')
         self.input = swisspy.smooth_join(self.models, 'input')
         self.input_model = swisspy.smooth_join(self.models, 'enter_paths_model.txt')
         self.input_file = swisspy.smooth_join(self.root, 'enter_paths_here.txt')
@@ -160,7 +160,6 @@ class TestSimpleTransfer(unittest.TestCase):
     def test_error_generated_on_moving_same_file(self):
         guinea_pig_dir = os.path.join(self.dest, 'move_me')
         os.mkdir(guinea_pig_dir)
-        self.log_file_path = os.path.join(self.logs, 'test_samefile_error.txt')
         with open(self.input_file, 'w') as input_file:
             input_file.write('move_me')
 
@@ -171,7 +170,6 @@ class TestSimpleTransfer(unittest.TestCase):
         self.assertIn(expected_error, self.get_log_contents())
 
     def test_log_unmatched_patterns(self):
-        self.log_file_path = os.path.join(self.logs, 'test_unmatched.txt')
         with open(self.input_file, 'w') as input_file:
             input_file.write('emperor_zibzob')
 
@@ -182,7 +180,6 @@ class TestSimpleTransfer(unittest.TestCase):
         self.assertIn('emperor_zibzob', self.get_log_contents())
 
     def test_correct_behavior_on_no_pattern_file_direct(self):
-        self.log_file_path = os.path.join(self.logs, 'test_no_pattern_dir.txt')
         expected = self.log_text.no_patterns.format(path_file=self.input_file)
 
         move_by_regex.move_by_regex(self.source,
@@ -192,7 +189,6 @@ class TestSimpleTransfer(unittest.TestCase):
         self.assertIn(expected, self.get_log_contents())
 
     def test_correct_behavior_on_no_pattern_file_cmd_line(self):
-        self.log_file_path = os.path.join(self.logs, 'test_no_pattern_cmd.txt')
         pattern_file = swisspy.smooth_join(self.root, '..',
                                            'enter_paths_here.txt')
         command_list=[
