@@ -12,9 +12,11 @@ class LogMessage:
         moved_files_header = "{type} moved:"
         found_files_header = "{type} found:"
         unmatched_header = "The following patterns were not matched:"
+        no_patterns = "No patterns entered in {path_file}; nothing to do."
 
         self.header = header
         self.success_story = success_story
         self.moved_files_header = moved_files_header
         self.found_files_header = found_files_header
         self.unmatched_header = unmatched_header
+        self.no_patterns = no_patterns

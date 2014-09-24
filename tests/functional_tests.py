@@ -144,8 +144,6 @@ class TransferTest(unittest.TestCase):
         contents = self.get_log_contents()
         self.assertIn("Directories found:", contents)
 
-
-
     # Ability to run from command line
     def test_command_line_flags(self):
         self.log_file_path = os.path.join(self.logs, 'test_cl_flags.txt')
@@ -188,8 +186,6 @@ class TransferTest(unittest.TestCase):
     # Stop before moving to check that the last modified time was before a
     # given date. If not, log when this is, on which file, and hopefully
     # whodunnit.
-
-
 
 if __name__ == '__main__':
     import doctest

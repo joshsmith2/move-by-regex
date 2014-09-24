@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
-import unittest
+import logging
 import os
 import shutil
 import swisspy
-import logging
+import subprocess
+import unittest
 
 import log_messages
 import move_by_regex
@@ -23,7 +24,7 @@ class TestSimpleTransfer(unittest.TestCase):
         self.log_file_path = None
         self.input = swisspy.smooth_join(self.models, 'input')
         self.input_model = swisspy.smooth_join(self.models, 'enter_paths_model.txt')
-        self.input_file = swisspy.smooth_join(self.models, 'enter_paths_here.txt')
+        self.input_file = swisspy.smooth_join(self.root, 'enter_paths_here.txt')
         self.desired_output = swisspy.smooth_join(self.models, 'desired_output')
 
         self.clear_dirs()
@@ -179,6 +180,32 @@ class TestSimpleTransfer(unittest.TestCase):
 
         self.assertIn(self.log_text.unmatched_header, self.get_log_contents())
         self.assertIn('emperor_zibzob', self.get_log_contents())
+
+    def test_correct_behavior_on_no_pattern_file_direct(self):
+        self.log_file_path = os.path.join(self.logs, 'test_no_pattern_dir.txt')
+        expected = self.log_text.no_patterns.format(path_file=self.input_file)
+
+        move_by_regex.move_by_regex(self.source,
+                                    self.dest,
+                                    log_file=self.log_file_path)
+
+        self.assertIn(expected, self.get_log_contents())
+
+    def test_correct_behavior_on_no_pattern_file_cmd_line(self):
+        self.log_file_path = os.path.join(self.logs, 'test_no_pattern_cmd.txt')
+        pattern_file = swisspy.smooth_join(self.root, '..',
+                                           'enter_paths_here.txt')
+        command_list=[
+            os.path.join(self.root, '..', 'move_by_regex.py'),
+            "-s", self.source,
+            "-d", self.dest,
+            "-l", self.log_file_path,]
+
+        expected = self.log_text.no_patterns.format(path_file=pattern_file)
+
+        subprocess.call(command_list)
+
+        self.assertIn(expected, self.get_log_contents())
 
 if __name__ == '__main__':
     import doctest
