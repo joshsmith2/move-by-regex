@@ -221,17 +221,14 @@ def match(match_to, input):
     >>> match(regex_example, 'Pamp')
     True
     """
+    matches=False
     if match_to.type == 'regex':
         if re.match(match_to.regex_pattern, input):
-            out = True
-        else:
-            out = False
+            matches = True
     else:
         if input == match_to.name or match_to.type == 'glob':
-            out = True
-        else:
-            out = False
-    return out
+            matches = True
+    return matches
 
 def get_redundant_patterns(from_list):
     """
@@ -244,8 +241,6 @@ def get_redundant_patterns(from_list):
     redundant = []
     not_redundant = sorted(from_list[:], key=len)
     for p in not_redundant:
-        # Only interested in pattern longer than p. This will also stop us for
-        # checking p itself.
         candidates = [n for n in not_redundant if len(n) >= len(p) if n != p]
         for c in candidates:
             # Guilty until proven innocent
@@ -306,16 +301,16 @@ def search_source_for_patterns(source, patterns,
         if not possible_patterns:
             continue
         for p in possible_patterns:
-            to_match = p[walk_depth]
-            for d in dirs:
+            to_match = PatternPiece(p[walk_depth])
+            for d in dirs[:]:
                 try:
-                    paths_match = match(d, to_match)
-                except Exception as e:
-                    if p not in invalid_regex:
-                        invalid_regex.append(p)
-                    to_check.remove(p)
-                    continue
-                if match(d, to_match):
+                    paths_match = match(to_match, d)
+                except Exception:
+                    if to_match.regex_pattern not in invalid_regex:
+                        invalid_regex.append(to_match.regex_pattern)
+                        to_check.remove(p)
+                        continue
+                if paths_match:
                     # We've got a match! If that's the end of the pattern,
                     # move this object
                     if len(p) - 1 == walk_depth:
@@ -326,16 +321,23 @@ def search_source_for_patterns(source, patterns,
                         satisfied.append(p)
                         # Only remove this from the list to check if it doesn't
                         # contain a glob
-                        if '*' not in p:
+                        if to_match.type == 'string':
                             to_check.remove(p)
             for f in files:
-                if match(f, to_match):
+                try:
+                    paths_match = match(to_match, f)
+                except Exception:
+                    if to_match.regex_pattern not in invalid_regex:
+                        invalid_regex.append(to_match.regex_pattern)
+                        to_check.remove(p)
+                        continue
+                if paths_match:
                     if len(p) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
                         files.remove(f)
                         satisfied.append(p)
-                        if '*' not in p:
+                        if to_match.type == 'string':
                             to_check.remove(p)
     sep = os.path.sep
     paths_not_matched = [sep.join(t) for t in to_check if t not in satisfied]
@@ -343,10 +345,10 @@ def search_source_for_patterns(source, patterns,
     redundant_paths = [sep.join(r) for r in redundant_patterns]
     out_dict = {'dirs_to_move':dirs_to_move,
                 'files_to_move':files_to_move,
+                'invalid_regex':invalid_regex,
                 'paths_matched':paths_matched,
                 'paths_not_matched':paths_not_matched,
-                'redundant_paths':redundant_paths,
-                'invalid_regex':invalid_regex,}
+                'redundant_paths':redundant_paths,}
     return out_dict
 
 def strip_leading_char(from_str, character='/'):

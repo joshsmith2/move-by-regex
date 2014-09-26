@@ -98,6 +98,7 @@ class TestSimpleTransfer(unittest.TestCase):
                                                 'spacer',
                                                 'move_only_from_spacer')],
                     'files_to_move':[],
+                    'invalid_regex':[],
                     'paths_matched':['*/move_only_from_spacer'],
                     'paths_not_matched':['not_found'],
                     'redundant_paths':[]}
@@ -121,6 +122,7 @@ class TestSimpleTransfer(unittest.TestCase):
                                                          'spacer',
                                                          'move_only_from_spacer')],
                             'files_to_move':[],
+                            'invalid_regex':[],
                             'paths_matched':['spacer/move_only_from_spacer'],
                             'paths_not_matched':[],
                             'redundant_paths':['spacer/move_only_from_spacer/a_file']}
