@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from django_bits import *
 import argparse
 import os
 import swisspy
@@ -7,6 +8,7 @@ import shutil
 import logging
 import log_messages
 import re
+
 
 class PatternPiece:
     """Part of a pattern, which itself is a divided path.
@@ -403,6 +405,9 @@ def move_creating_intermediaries(source, to_move, dest):
         else:
             mci_logger.exception("Error encountered while moving " + to_move)
     return successfully_moved
+
+def get_file_stats(source, db_name):
+    """Creates a database pertaining to the """
 
 def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
                   log_unmatched=False):
