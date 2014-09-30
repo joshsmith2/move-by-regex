@@ -4,9 +4,67 @@ import argparse
 import os
 import swisspy
 import shutil
-import sys
 import logging
 import log_messages
+import re
+
+class PatternPiece:
+    """Part of a pattern, which itself is a divided path.
+    E.g:
+      path:               '/tmp/'
+      pattern:            ['tmp']
+      PatternPiece.name:  'tmp'
+      PatternPiece.type:  'string'
+      ...
+    """
+    def __init__(self, name,
+                 regex_ind_start="regex{",
+                 regex_ind_end="}",
+                 glob_pattern='*',):
+        """Initialises a number of useful variables concerning the object:
+
+        self.name : str
+            The string passed as input to create this object - e.g 'tmp' or
+            'regex{.*}'
+        self.regex_ind_start : str : default 'regex{'
+        self.regex_ind_end : str : default '}'
+            Used to denote the start and end, respectively, of a string
+            to be interpreted as a regex pattern
+        self.glob_pattern : str : default '*'
+            A wildcard which will match any string
+
+        >>> p = PatternPiece('bramblescrant')
+        >>> p.name
+        'bramblescrant'
+        >>> p.type
+        'string'
+        >>> p.regex_pattern
+
+
+        >>> q = PatternPiece('{[Ww]hee+}', regex_ind_start='{', regex_ind_end='}')
+        >>> q.name
+        '{[Ww]hee+}'
+        >>> q.type
+        'regex'
+        >>> q.regex_pattern
+        '[Ww]hee+'
+
+        """
+        self.name = name
+        self.regex_ind_start = regex_ind_start
+        self.regex_ind_end = regex_ind_end
+        self.glob_pattern = glob_pattern
+        self.regex_pattern = None
+
+        if self.name[:len(self.regex_ind_start)] == self.regex_ind_start and \
+           self.name[-len(self.regex_ind_end):] == self.regex_ind_end:
+            self.type = 'regex'
+            regex_pattern = self.name[len(regex_ind_start):-len(regex_ind_end)]
+            self.regex_pattern = regex_pattern
+        elif self.name == self.glob_pattern:
+            self.type = 'glob'
+        else:
+            self.type = 'string'
 
 def init_args(current_dir):
     """ Initialise command line arguments"""
@@ -21,7 +79,6 @@ def init_args(current_dir):
                    help="The destination")
     p.add_argument('-p', '--paths-file', metavar='path', type=str,
                    dest='paths_file',
-                   default=os.path.join(current_dir, 'enter_paths_here.txt'),
                    help="Path to a file containing patterns to be moved")
     p.add_argument('-l', '--log-file', metavar='path', type=str,
                    dest='log_file',
@@ -139,22 +196,38 @@ def path_depth_difference(path1, path2):
     path2_depth = len(os.path.normpath(path2).split(os.path.sep))
     return abs(path1_depth - path2_depth)
 
-def glob_equal(candidate, match_to, glob='*'):
-    """
-    >>> glob_equal('hive', 'hive')
+def match(match_to, input):
+    """Compare a string using either a glob or regex match, depending on
+    whether the defined regex indicators are present. Return true or false.
+
+    match_to : PatternPiece
+        PatternPiece objects contain information on what type of string they
+        are (see their docs)
+    input : str
+
+    # Glob and string matches:
+    >>> string_example = PatternPiece('hive')
+    >>> match(string_example, 'hive')
     True
-    >>> glob_equal('hive','handrews')
+    >>> match(string_example,'handrews')
     False
-    >>> glob_equal('anything', '*')
+    >>> glob_example = PatternPiece('*')
+    >>> match(glob_example, 'anything')
     True
-    >>> glob_equal('anything', '&', glob='&')
+
+    # Regex matches:
+    >>> regex_example = PatternPiece('regex{[Pp]amp}')
+    >>> match(regex_example, 'Pamp')
     True
     """
-    if candidate == match_to or match_to == glob:
-        out = True
+    matches=False
+    if match_to.type == 'regex':
+        if re.match(match_to.regex_pattern, input):
+            matches = True
     else:
-        out = False
-    return out
+        if input == match_to.name or match_to.type == 'glob':
+            matches = True
+    return matches
 
 def get_redundant_patterns(from_list):
     """
@@ -162,27 +235,29 @@ def get_redundant_patterns(from_list):
     {'not_redundant': [['a', 'b']], 'redundant': [['a', 'b', 'c']]}
     >>> get_redundant_patterns([['a','*'], ['a','b'], ['a','c','f']])
     {'not_redundant': [['a', '*']], 'redundant': [['a', 'b'], ['a', 'c', 'f']]}
+
     """
     redundant = []
     not_redundant = sorted(from_list[:], key=len)
     for p in not_redundant:
-        # Only interested in pattern longer than p. This will also stop us for
-        # checking p itself.
         candidates = [n for n in not_redundant if len(n) >= len(p) if n != p]
         for c in candidates:
             # Guilty until proven innocent
             p_and_c_distinct = False
             for depth in range(0, len(p)):
-                if not glob_equal(c[depth], p[depth]):
+                # Conversion to PatternPiece here allows us to use match,
+                # which handles globs and regex gracefully
+                p_piece = PatternPiece(p[depth])
+                if not match(p_piece, c[depth]):
                     p_and_c_distinct = True
-
             if not p_and_c_distinct:
                 redundant.append(c)
                 not_redundant.remove(c)
     return {'redundant': redundant,
             'not_redundant': not_redundant}
 
-def search_source_for_patterns(source, patterns):
+def search_source_for_patterns(source, patterns,
+                               regex_ind_start=None, regex_ind_end=None):
     """
     Walk the source directory and return a list of paths which match patterns.
     This is the meat. If anything's gone awry, it's probably this function.
@@ -191,6 +266,10 @@ def search_source_for_patterns(source, patterns):
         The source directory to search for patterns
     patterns : list : lists
         A list of patterns
+    regex_ind_start : str
+        String indicating the beginning of a regex pattern
+    regex_ind_end : str
+        String indicating the end of a regex pattern
 
     :return dict
         {'dirs_to_move' : list of dirs to move,
@@ -199,11 +278,13 @@ def search_source_for_patterns(source, patterns):
          'paths_not_matched' : list of paths queried but not found in source
          'redundant_paths' : list of paths not searched as a parent dir had
                              already been found}
+         'invalid_regex' : Invalid regex patterns encountered.
 
     """
     dirs_to_move = []
     files_to_move=[]
     satisfied = []
+    invalid_regex = []
 
     # Remove any redundant patterns before going on (e.g ['usr','bin'] is
     # redundant if ['usr'] is present.
@@ -218,39 +299,58 @@ def search_source_for_patterns(source, patterns):
         possible_patterns = [p for p in to_check if len(p) - 1 >= walk_depth]
         if not possible_patterns:
             continue
-        for p in possible_patterns:
-            for d in dirs:
-                if glob_equal(d, p[walk_depth]):
+        for pattern in possible_patterns:
+            pieces = [PatternPiece(p) for p in pattern]
+            to_match = pieces[walk_depth]
+            for d in dirs[:]:
+                try:
+                    paths_match = match(to_match, d)
+                except Exception:
+                    if to_match.regex_pattern not in invalid_regex:
+                        invalid_regex.append(to_match.regex_pattern)
+                        to_check.remove(pattern)
+                        continue
+                if paths_match:
                     # We've got a match! If that's the end of the pattern,
                     # move this object
-                    if len(p) - 1 == walk_depth:
+                    if len(pattern) - 1 == walk_depth:
                         dir_path = swisspy.smooth_join(root, d)
                         dirs_to_move.append(dir_path)
                         # Remove this dir from dirs to be walked
                         dirs.remove(d)
-                        satisfied.append(p)
+                        satisfied.append(pattern)
                         # Only remove this from the list to check if it doesn't
                         # contain a glob
-                        if '*' not in p:
-                            to_check.remove(p)
+                        non_strings = [q for q in pieces if q.type != 'string']
+                        if not non_strings:
+                            to_check.remove(pattern)
             for f in files:
-                if glob_equal(f, p[walk_depth]):
-                    if len(p) - 1 == walk_depth:
+                try:
+                    paths_match = match(to_match, f)
+                except Exception:
+                    if to_match.regex_pattern not in invalid_regex:
+                        invalid_regex.append(to_match.regex_pattern)
+                        to_check.remove(pattern)
+                        continue
+                if paths_match:
+                    if len(pattern) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
                         files.remove(f)
-                        satisfied.append(p)
-                        if '*' not in p:
-                            to_check.remove(p)
+                        satisfied.append(pattern)
+                        non_strings = [q for q in pieces if q.type != 'string']
+                        if not non_strings:
+                            to_check.remove(pattern)
     sep = os.path.sep
     paths_not_matched = [sep.join(t) for t in to_check if t not in satisfied]
     paths_matched = [sep.join(s) for s in satisfied]
     redundant_paths = [sep.join(r) for r in redundant_patterns]
     out_dict = {'dirs_to_move':dirs_to_move,
                 'files_to_move':files_to_move,
+                'invalid_regex':invalid_regex,
                 'paths_matched':paths_matched,
                 'paths_not_matched':paths_not_matched,
-                'redundant_paths':redundant_paths}
+                'redundant_paths':redundant_paths,}
     return out_dict
 
 def strip_leading_char(from_str, character='/'):
@@ -306,10 +406,14 @@ def move_creating_intermediaries(source, to_move, dest):
 
 def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
                   log_unmatched=False):
+
     # Set up variables
     dir_successes = []
     file_successes = []
     log_text = log_messages.LogMessage()
+    # Set up logging
+    init_logging(log_file, log_text)
+    main_logger = logging.getLogger('mbr.main')
     swisspy_path = swisspy.get_dir_currently_running_in()
     current_dir = swisspy.smooth_join(swisspy_path, '..')
     if not paths_file:
@@ -317,11 +421,8 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
     if not log_file:
         log_file = os.path.join(current_dir, 'logs', 'move_log.txt')
 
-    # Set up logging
-    init_logging(log_file, log_text)
-    main_logger = logging.getLogger('mbr.main')
-
     paths = get_lines(paths_file)
+    main_logger.info("\n".join(paths))
     if paths:
         patterns = get_patterns(paths)
         search_result = search_source_for_patterns(source, patterns)

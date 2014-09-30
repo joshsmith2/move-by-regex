@@ -1,16 +1,25 @@
-# In this file, please enter any paths you would like to be moved, 
-# relative to the source directory. You can specify the source 
+# In this file, please enter any paths (files or directories) you would like to
+# be moved, relative to the source directory. You can specify the source
 # using the -s flag (e.g move-by-regex.py -s /Volumes/Video)
 #
-# You can use * to specify any path, and all lines starting with '#' will 
-# be ignored. 
-#
-# For example, if the source directory is '/Volumes/Video', the following 
-# entry will move all folders with the structure 
+# REGEX AND GLOBS:
+# The character '*' will specify any input. For example, if the source
+# directory is '/Volumes/Video', the following entry will move all folders
+# with the structure
 # /Volumes/Video/foot/<anything>/<anything_else>/bart:
-# 
-# foot/*/*/bart
 #
-# You can pass a list of file paths too:
-# 
-# foot/bart/brunt.txt
+#   foot/*/*/bart
+#
+# In addition, any strings enclosed with 'regex{}' will be parsed as regex,
+# so (for example) the following path will match all six digit folders
+# starting with a 4 in the Projects directory:
+#
+#   Projects/regex{4[0-9]{5}}
+#
+# Note: You will need to double any backslashes used in regex patterns,
+# unfortunately - so regex{(a|b)_is_\1} becomes regex{(a|b)_is_\\1}
+#
+# The regex interpreter used is python's 're' module; a good guide to possible
+# patterns can be found at https://docs.python.org/2/library/re.html
+#
+# All lines starting with a '#', incluing this one, will be ignored.

@@ -65,12 +65,12 @@ class TestSimpleTransfer(unittest.TestCase):
             existing_loggers[el].handlers=[]
 
     def test_paths_can_be_loaded_from_input_without_comments(self):
-        test_input = "a_path\n# A comment"
+        test_input = "\na_path\n# A comment"
         with open(self.input_file, 'a') as input_file:
             input_file.write(test_input)
         observed = move_by_regex.get_lines(self.input_file)
         desired = ['a_path']
-        assert observed == desired
+        self.assertEqual(observed, desired)
 
     def set_up_spacer_test(self):
         os.mkdir(swisspy.smooth_join(self.source,'spacer'))
@@ -92,12 +92,14 @@ class TestSimpleTransfer(unittest.TestCase):
 
         operation = move_by_regex.search_source_for_patterns
         observed = operation(self.source,
-                            [['*','move_only_from_spacer'],['not_found']])
+                             patterns=[['*','move_only_from_spacer'],
+                                       ['not_found']])
 
         desired = {'dirs_to_move':[os.path.join(self.source,
                                                 'spacer',
                                                 'move_only_from_spacer')],
                     'files_to_move':[],
+                    'invalid_regex':[],
                     'paths_matched':['*/move_only_from_spacer'],
                     'paths_not_matched':['not_found'],
                     'redundant_paths':[]}
@@ -117,18 +119,22 @@ class TestSimpleTransfer(unittest.TestCase):
                              [['spacer','move_only_from_spacer'],
                               ['spacer', 'move_only_from_spacer', 'a_file']])
 
-        assert observed == {'dirs_to_move':[os.path.join(self.source,
-                                                         'spacer',
-                                                         'move_only_from_spacer')],
-                            'files_to_move':[],
-                            'paths_matched':['spacer/move_only_from_spacer'],
-                            'paths_not_matched':[],
-                            'redundant_paths':['spacer/move_only_from_spacer/a_file']}
+
+        desired = {'dirs_to_move':[os.path.join(self.source,
+                                               'spacer',
+                                               'move_only_from_spacer')],
+                   'files_to_move':[],
+                   'invalid_regex':[],
+                   'paths_matched':['spacer/move_only_from_spacer'],
+                   'paths_not_matched':[],
+                   'redundant_paths':['spacer/move_only_from_spacer/a_file']}
+
+        self.assertEqual(observed,desired)
 
     def test_move_a_directory_from_the_root(self):
         os.mkdir(os.path.join(self.desired_output, 'move_me'))
         test_input = 'move_me'
-        with open(self.input_file, 'a') as input_file:
+        with open(self.input_file, 'w') as input_file:
             input_file.write(test_input)
 
         move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
@@ -138,16 +144,17 @@ class TestSimpleTransfer(unittest.TestCase):
     def test_move_a_directory_from_depth_of_1(self):
         self.set_up_spacer_test()
         test_input = "*/move_only_from_spacer"
-        with open(self.input_file, 'a') as input_file:
+        with open(self.input_file, 'w') as input_file:
             input_file.write(test_input)
 
-        move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
+        move_by_regex.move_by_regex(self.source, self.dest,
+                                    paths_file=self.input_file)
 
-        assert swisspy.dirs_match(self.dest, self.desired_output)
+        self.assertTrue(swisspy.dirs_match(self.dest, self.desired_output))
 
     def test_glob_matches_more_than_one_file(self):
         test_input = "*/spacer_1"
-        with open(self.input_file, 'a') as input_file:
+        with open(self.input_file, 'w') as input_file:
             input_file.write(test_input)
 
         move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
@@ -155,7 +162,7 @@ class TestSimpleTransfer(unittest.TestCase):
         should_exist = [swisspy.smooth_join(self.dest, 'depth_2', 'spacer_1'),
                         swisspy.smooth_join(self.dest, 'depth_3', 'spacer_1')]
         for dir in should_exist:
-            assert os.path.exists(dir)
+            self.assertTrue(os.path.exists(dir))
 
     def test_error_generated_on_moving_same_file(self):
         guinea_pig_dir = os.path.join(self.dest, 'move_me')

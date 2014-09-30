@@ -35,10 +35,10 @@ class TransferTest(unittest.TestCase):
         self.input_file = swisspy.smooth_join(self.models,
                                               'enter_paths_here.txt')
         self.log_mod_dest = os.path.join(self.root, 'log_messages.py')
-        self.test_input = "move_me\n" \
-                          "*/move_me\n" \
-                          "move_me_too/i_should_also_be_moved\n" \
-                          "# A user comment"
+        self.test_input = "\nmove_me" \
+                          "\n*/move_me" \
+                          "\nmove_me_too/i_should_also_be_moved" \
+                          "\n# A user comment"
         #Clean sweep
         self.clear(dirs=[self.source, self.dest, self.logs],
                    files=[self.input_file])
@@ -106,7 +106,6 @@ class TransferTest(unittest.TestCase):
         self.assertTrue(swisspy.dirs_match(self.dest, goal))
 
     # Generate a local file log displaying all directories moved
-    # TODO: At the moment, this test seems to be running twice from Pycharm?
     def test_log_created(self):
         move_by_regex.move_by_regex(self.source,
                                     self.dest,
@@ -168,18 +167,24 @@ class TransferTest(unittest.TestCase):
 
     # Regex support within paths
     def test_regex_matching_correctly(self):
-        test_strings = ['[pw]eebles', 'l?ummox', '(ben|bill)_and_\1' ]
+        test_strings = ['[pw]eebles', 'l?ummox', '(ben|bill)_and_ben',
+                        '4[0-9]{5}', 'boo\\[bar\\]',
+                        '([AB])_is_\\1']
         with open(self.input_file, 'w') as input_file:
             for t in test_strings:
-                input_file.write("container/regex{" + t + "}")
+                input_file.write("container/regex{" + t + "}\n")
         container = os.path.join(self.source, 'container')
         os.mkdir(container)
-        # Test directories to put the regex through its paces. Two successes and
-        # a failure for each.
+        # Test directories to put the regex functionality through its paces.
         test_dirs = {'succeed':['peebles', 'weebles',
                                 'lummox', 'ummox',
-                                'bill_and_bill', 'ben_and_ben'],
-                     'fail':['Beebles', 'mummox', 'bill_and_ben']}
+                                'ben_and_ben', 'bill_and_ben',
+                                '412345',
+                                'boo[bar]',
+                                'A_is_A', 'B_is_B'
+                                ],
+                     'fail':['Beebles', 'mummox','bill_and_bill',
+                             '444','41234G', 'A_is_B']}
 
         for t in test_dirs['succeed']:
             os.mkdir(os.path.join(container, t))
