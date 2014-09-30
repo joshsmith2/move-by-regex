@@ -79,7 +79,6 @@ def init_args(current_dir):
                    help="The destination")
     p.add_argument('-p', '--paths-file', metavar='path', type=str,
                    dest='paths_file',
-                   default=os.path.join(current_dir, 'enter_paths_here.txt'),
                    help="Path to a file containing patterns to be moved")
     p.add_argument('-l', '--log-file', metavar='path', type=str,
                    dest='log_file',
@@ -300,45 +299,48 @@ def search_source_for_patterns(source, patterns,
         possible_patterns = [p for p in to_check if len(p) - 1 >= walk_depth]
         if not possible_patterns:
             continue
-        for p in possible_patterns:
-            to_match = PatternPiece(p[walk_depth])
+        for pattern in possible_patterns:
+            pieces = [PatternPiece(pattern) for p in pattern]
+            to_match = pieces[walk_depth]
             for d in dirs[:]:
                 try:
                     paths_match = match(to_match, d)
                 except Exception:
                     if to_match.regex_pattern not in invalid_regex:
                         invalid_regex.append(to_match.regex_pattern)
-                        to_check.remove(p)
+                        to_check.remove(pattern)
                         continue
                 if paths_match:
                     # We've got a match! If that's the end of the pattern,
                     # move this object
-                    if len(p) - 1 == walk_depth:
+                    if len(pattern) - 1 == walk_depth:
                         dir_path = swisspy.smooth_join(root, d)
                         dirs_to_move.append(dir_path)
                         # Remove this dir from dirs to be walked
                         dirs.remove(d)
-                        satisfied.append(p)
+                        satisfied.append(pattern)
                         # Only remove this from the list to check if it doesn't
                         # contain a glob
-                        if to_match.type == 'string':
-                            to_check.remove(p)
+                        non_strings = [q for q in pieces if q.type != 'string']
+                        if not non_strings:
+                            to_check.remove(pattern)
             for f in files:
                 try:
                     paths_match = match(to_match, f)
                 except Exception:
                     if to_match.regex_pattern not in invalid_regex:
                         invalid_regex.append(to_match.regex_pattern)
-                        to_check.remove(p)
+                        to_check.remove(pattern)
                         continue
                 if paths_match:
-                    if len(p) - 1 == walk_depth:
+                    if len(pattern) - 1 == walk_depth:
                         file_path = swisspy.smooth_join(root, f)
                         files_to_move.append(file_path)
                         files.remove(f)
-                        satisfied.append(p)
-                        if to_match.type == 'string':
-                            to_check.remove(p)
+                        satisfied.append(pattern)
+                        non_strings = [q for q in pieces if q.type != 'string']
+                        if not non_strings:
+                            to_check.remove(pattern)
     sep = os.path.sep
     paths_not_matched = [sep.join(t) for t in to_check if t not in satisfied]
     paths_matched = [sep.join(s) for s in satisfied]
@@ -404,10 +406,14 @@ def move_creating_intermediaries(source, to_move, dest):
 
 def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
                   log_unmatched=False):
+
     # Set up variables
     dir_successes = []
     file_successes = []
     log_text = log_messages.LogMessage()
+    # Set up logging
+    init_logging(log_file, log_text)
+    main_logger = logging.getLogger('mbr.main')
     swisspy_path = swisspy.get_dir_currently_running_in()
     current_dir = swisspy.smooth_join(swisspy_path, '..')
     if not paths_file:
@@ -415,11 +421,8 @@ def move_by_regex(source, dest, paths_file="", log_file="", read_only=False,
     if not log_file:
         log_file = os.path.join(current_dir, 'logs', 'move_log.txt')
 
-    # Set up logging
-    init_logging(log_file, log_text)
-    main_logger = logging.getLogger('mbr.main')
-
     paths = get_lines(paths_file)
+    main_logger.info("\n".join(paths))
     if paths:
         patterns = get_patterns(paths)
         search_result = search_source_for_patterns(source, patterns)

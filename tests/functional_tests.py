@@ -168,7 +168,8 @@ class TransferTest(unittest.TestCase):
     # Regex support within paths
     def test_regex_matching_correctly(self):
         test_strings = ['[pw]eebles', 'l?ummox', '(ben|bill)_and_ben',
-                        '4[0-9]{5}' ]
+                        '4[0-9]{5}', 'boo\\[bar\\]',
+                        '([AB])_is_\\1']
         with open(self.input_file, 'w') as input_file:
             for t in test_strings:
                 input_file.write("container/regex{" + t + "}\n")
@@ -178,9 +179,12 @@ class TransferTest(unittest.TestCase):
         test_dirs = {'succeed':['peebles', 'weebles',
                                 'lummox', 'ummox',
                                 'ben_and_ben', 'bill_and_ben',
-                                '412345',],
+                                '412345',
+                                'boo[bar]',
+                                'A_is_A', 'B_is_B'
+                                ],
                      'fail':['Beebles', 'mummox','bill_and_bill',
-                             '444','41234G']}
+                             '444','41234G', 'A_is_B']}
 
         for t in test_dirs['succeed']:
             os.mkdir(os.path.join(container, t))

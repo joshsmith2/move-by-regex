@@ -16,8 +16,10 @@
 #
 #   Projects/regex{4[0-9]{5}}
 #
+# Note: You will need to double any backslashes used in regex patterns,
+# unfortunately - so regex{(a|b)_is_\1} becomes regex{(a|b)_is_\\1}
+#
 # The regex interpreter used is python's 're' module; a good guide to possible
 # patterns can be found at https://docs.python.org/2/library/re.html
 #
 # All lines starting with a '#', incluing this one, will be ignored.
-
