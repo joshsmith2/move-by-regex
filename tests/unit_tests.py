@@ -65,7 +65,7 @@ class TestSimpleTransfer(unittest.TestCase):
             existing_loggers[el].handlers=[]
 
     def test_paths_can_be_loaded_from_input_without_comments(self):
-        test_input = "a_path\n# A comment"
+        test_input = "\na_path\n# A comment"
         with open(self.input_file, 'a') as input_file:
             input_file.write(test_input)
         observed = move_by_regex.get_lines(self.input_file)
@@ -134,7 +134,7 @@ class TestSimpleTransfer(unittest.TestCase):
     def test_move_a_directory_from_the_root(self):
         os.mkdir(os.path.join(self.desired_output, 'move_me'))
         test_input = 'move_me'
-        with open(self.input_file, 'a') as input_file:
+        with open(self.input_file, 'w') as input_file:
             input_file.write(test_input)
 
         move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
@@ -144,10 +144,11 @@ class TestSimpleTransfer(unittest.TestCase):
     def test_move_a_directory_from_depth_of_1(self):
         self.set_up_spacer_test()
         test_input = "*/move_only_from_spacer"
-        with open(self.input_file, 'a') as input_file:
+        with open(self.input_file, 'w') as input_file:
             input_file.write(test_input)
 
-        move_by_regex.move_by_regex(self.source, self.dest, self.input_file)
+        move_by_regex.move_by_regex(self.source, self.dest,
+                                    paths_file=self.input_file)
 
         self.assertTrue(swisspy.dirs_match(self.dest, self.desired_output))
 
