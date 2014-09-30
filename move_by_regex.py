@@ -300,7 +300,7 @@ def search_source_for_patterns(source, patterns,
         if not possible_patterns:
             continue
         for pattern in possible_patterns:
-            pieces = [PatternPiece(pattern) for p in pattern]
+            pieces = [PatternPiece(p) for p in pattern]
             to_match = pieces[walk_depth]
             for d in dirs[:]:
                 try:

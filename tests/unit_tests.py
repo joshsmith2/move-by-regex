@@ -92,7 +92,8 @@ class TestSimpleTransfer(unittest.TestCase):
 
         operation = move_by_regex.search_source_for_patterns
         observed = operation(self.source,
-                            [['*','move_only_from_spacer'],['not_found']])
+                             patterns=[['*','move_only_from_spacer'],
+                                       ['not_found']])
 
         desired = {'dirs_to_move':[os.path.join(self.source,
                                                 'spacer',
