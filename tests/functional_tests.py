@@ -35,10 +35,10 @@ class TransferTest(unittest.TestCase):
         self.input_file = swisspy.smooth_join(self.models,
                                               'enter_paths_here.txt')
         self.log_mod_dest = os.path.join(self.root, 'log_messages.py')
-        self.test_input = "move_me\n" \
-                          "*/move_me\n" \
-                          "move_me_too/i_should_also_be_moved\n" \
-                          "# A user comment"
+        self.test_input = "\nmove_me" \
+                          "\n*/move_me" \
+                          "\nmove_me_too/i_should_also_be_moved" \
+                          "\n# A user comment"
         #Clean sweep
         self.clear(dirs=[self.source, self.dest, self.logs],
                    files=[self.input_file])
