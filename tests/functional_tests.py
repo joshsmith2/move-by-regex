@@ -16,6 +16,8 @@ import log_messages
 import logging
 import subprocess as sp
 
+from django_bits.functional_tests.tests import *
+
 class TransferTest(unittest.TestCase):
 
     def setUp(self):

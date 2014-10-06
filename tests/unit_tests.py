@@ -7,6 +7,9 @@ import swisspy
 import subprocess
 import unittest
 
+# Django stuff
+from django.test import TestCase
+
 import log_messages
 import move_by_regex
 
