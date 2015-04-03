@@ -6,9 +6,16 @@ import shutil
 import swisspy
 import subprocess
 import unittest
-
+import sys
 import log_messages
-import move_by_regex
+
+# Import base script. If you can't, add content root to sys.path
+try:
+    import move_by_regex
+except ImportError:
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.append(base_dir)
+    import move_by_regex
 
 class TestSimpleTransfer(unittest.TestCase):
 

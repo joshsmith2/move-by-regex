@@ -11,10 +11,18 @@ import os
 import shutil
 import inspect
 import swisspy
-import move_by_regex
 import log_messages
 import logging
 import subprocess as sp
+import sys
+
+# Import base script. If you can't, add content root to sys.path
+try:
+    import move_by_regex
+except ImportError:
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.append(base_dir)
+    import move_by_regex
 
 class TransferTest(unittest.TestCase):
 
